@@ -1,0 +1,7 @@
+# Python-generated files
+.venv/
+.python-version
+__pycache__/
+*.csv
+*.idea
+*.parquet

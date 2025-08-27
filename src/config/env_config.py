@@ -1,0 +1,28 @@
+from functools import lru_cache
+from pathlib import Path
+from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
+import os
+
+@lru_cache
+def get_project_root():
+    """프로젝트 루트 디렉토리 반환"""
+    return Path(__file__).parent.parent.parent
+
+class ProjectConfig(BaseSettings):
+    """프로젝트 환경변수 설정"""
+    # Gemini API 설정
+    GEMINI_API_KEY: str
+    GEMINI_MODEL_ARGU: str
+    GEMINI_MODEL_FILTER: str
+    
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+@lru_cache
+def get_config():
+    """환경설정 싱글톤 반환"""
+    return ProjectConfig()

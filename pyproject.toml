@@ -19,3 +19,8 @@ dependencies = [
     "tqdm>=4.67.1",
     "transformers>=4.55.4",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=6.2.1",
+]

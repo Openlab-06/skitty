@@ -1,21 +1,21 @@
 from google import genai
 from google.genai import types
 import pandas as pd
-from src.config.environment import get_environment_variables
+from src.config.env_config import get_config
 from src.utils.log import logger, log_performance, decorator_log
 import logging
 from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
 
-env = get_environment_variables()
+env = get_config()
 
 class DataArgumentation:
     def __init__(self, file_path: str):
         self.client = genai.Client(api_key=env.GEMINI_API_KEY)
         self.data = pd.read_parquet(file_path)
-        self.prompt = f"""
-당신은 스팸 문자를 분류하는 언어 모델입니다.
+        self.prompt ="""
+당신은 스팸 문자로 판정한 근거를 생성하는 대형 언어 모델입니다.
 아래 기준에 따라 스팸여부 판정의 근거를 간단명료하게 한 문장으로 작성해 주세요.
 
 **1. 판정 근거(한 문장):**
@@ -27,31 +27,37 @@ class DataArgumentation:
 - **링크/URL:** 일반적이지 않은 짧은 URL, 단축 URL 또는 의심스러운 링크가 포함되어 있나요?
 
 ### SPAM 문자
-{{text}}
+{text}
 
 ### 출력 형식
-- 스팸인지 아닌지 구분을 해준다음에. 판정근거를 토대로, 스팸일 경우, 스팸으로 판정한 이유에 대해 간단 명료하게 작성해주세요.
+- 스팸으로 판정한 이유에 대해 구체적으로 최소 200자 이상으로 작성해주세요.
         """
 
     @decorator_log(level=logging.INFO)
     @log_performance
     def data_argumentation(self):
+        output_list = []
         for idx, row in tqdm(self.data.iterrows(), total=len(self.data), desc="SPAM AUG", unit="row"):
             text = row["CN"]
-            output = []
-            resp = self.client.models.generate_content(
-                model=env.GEMINI_MODEL_ID,
-                contents=self.prompt.format(text=text),
-                config=types.GenerateContentConfig(
-                    temperature=0.0,
-                    max_output_tokens=1024,
+            try:
+                resp = self.client.models.generate_content(
+                    model=env.GEMINI_MODEL_ARGU,
+                    contents=self.prompt.format(text=text),
+                    config=types.GenerateContentConfig(
+                        temperature=0.0,
+                        max_output_tokens=512,
+                    )
                 )
-            )
-            logger.info(f"[SPAM AUG] idx={idx} success, result={resp.candidates[0].content.parts[0].text}")
-            output.append(resp.candidates[0].content.parts[0].text)
-        self.data.loc[idx, "output"] = output
+                result = resp.candidates[0].content.parts[0].text
+                output_list.append(result)
+                logger.info(f"[SPAM AUG] idx={idx} result={result} success")
+            except Exception as e:
+                logger.error(f"[SPAM AUG] idx={idx} failed: {e}")
+                output_list.append("")  # 실패시 빈 문자열
+        
+        self.data["output"] = output_list
         self.data.to_csv("./src/data/final_spam.csv", index=False)
             
 if __name__ == "__main__":
-    data_argumentation = DataArgumentation(file_path="./src/data/deduplicated_result.parquet")
+    data_argumentation = DataArgumentation(file_path="./src/data/final_spam.csv")
     data_argumentation.data_argumentation()

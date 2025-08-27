@@ -3,21 +3,6 @@ import sys
 import functools
 from datetime import datetime
 
-# log 포맷 지정
-class IndentFormmater(logging.Formatter):
-    '''log 포맷 지정'''
-    def format(self, record):
-        # 원래의 로그 포맷 유지
-        original = super().format(record)
-        # 메세지 줄바꿈마다 네 칸 인텐트
-        if record.msg:
-            parts = original.split('::\n', maxsplit=1)
-            if len(parts) == 2:
-                header = parts[0]
-                msg = parts[1].strip().replace('\n', '\n\t')
-                return f'{header}::\n    {msg}'
-            return original
-
 # 로거 설정
 logger = logging.getLogger('skitty')
 logger.setLevel(logging.DEBUG) # 로그레벨 설정
@@ -31,7 +16,7 @@ if not logger.hasHandlers():
     # 로거이름 %(name)s::, # 로그 시간 %(asctime)::s, 로그 레벨 %(levelname)::s
     # 로그가 찍힌 파이썬 py %(modeul)s, 로그 찍은 함수 %(funcName)s
     # 실제 찍힌 로그 메세지 %(message)s
-    formatter = IndentFormmater(
+    formatter = logging.Formatter(
         " %(name)s::%(asctime)s::%(levelname)s::[%(module)s.%(funcName)s]::\n%(message)s"
         , datefmt='%Y-%m-%d %H:%M:%S'
     )

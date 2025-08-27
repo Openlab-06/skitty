@@ -6,7 +6,7 @@
 set -e  # 오류 발생 시 스크립트 중단
 
 # 기본 설정
-DEFAULT_INPUT_FILE="./src/data/final_spam.csv"
+DEFAULT_INPUT_FILE="./src/data/raw_spam_2025.csv"
 DEFAULT_TEXT_COL="CN"
 DEFAULT_OUTPUT_DIR="./src/data"
 
@@ -31,6 +31,8 @@ show_help() {
     echo "  $0 --filter-only                      # 데이터 필터링만 실행"
     echo "  $0 --aug-only                         # 데이터 증강만 실행"
     echo "  $0 --status                           # 파이프라인 상태 확인"
+    echo "  $0 --sample-size 0.05 --sample-seed 123  # 5% 샘플링, 시드 123"
+    echo "  $0 --filter-only --sample-size 0.1   # 필터링만 실행, 10% 샘플링"
     echo ""
     echo "옵션:"
     echo "  -h, --help                            이 도움말 출력"
@@ -43,6 +45,8 @@ show_help() {
     echo "  --skip-aug                            데이터 증강 건너뛰기"
     echo "  --text-col COLUMN                     텍스트 컬럼명 (기본값: $DEFAULT_TEXT_COL)"
     echo "  --output-dir DIR                      출력 디렉토리 (기본값: $DEFAULT_OUTPUT_DIR)"
+    echo "  --sample-size FLOAT                   필터링용 샘플링 비율 (예: 0.02 = 2%)"
+    echo "  --sample-seed INT                     샘플링 시드 (예: 42)"
     echo "  --dry-run                             실제 실행 없이 명령어만 출력"
     echo ""
 }
@@ -106,12 +110,22 @@ run_pipeline() {
     local mode="$4"
     local dry_run="$5"
     local skip_flags="$6"
+    local sample_size="$7"
+    local sample_seed="$8"
     
     # Python 명령어 구성
     local cmd="uv run python -m src.data_pipeline"
     cmd="$cmd --input \"$input_file\""
     cmd="$cmd --text_col \"$text_col\""
     cmd="$cmd --output_dir \"$output_dir\""
+    
+    # 샘플링 매개변수 추가 (값이 있는 경우에만)
+    if [[ -n "$sample_size" ]]; then
+        cmd="$cmd --sample_size $sample_size"
+    fi
+    if [[ -n "$sample_seed" ]]; then
+        cmd="$cmd --sample_seed $sample_seed"
+    fi
     
     case "$mode" in
         "dedup")
@@ -170,6 +184,8 @@ main() {
     local mode="full"
     local dry_run="false"
     local skip_flags=""
+    local sample_size=""
+    local sample_seed=""
     
     # 인자 파싱
     while [[ $# -gt 0 ]]; do
@@ -217,6 +233,14 @@ main() {
                 output_dir="$2"
                 shift 2
                 ;;
+            --sample-size)
+                sample_size="$2"
+                shift 2
+                ;;
+            --sample-seed)
+                sample_seed="$2"
+                shift 2
+                ;;
             --dry-run)
                 dry_run="true"
                 shift
@@ -247,7 +271,7 @@ main() {
     fi
     
     # 파이프라인 실행
-    run_pipeline "$input_file" "$text_col" "$output_dir" "$mode" "$dry_run" "$skip_flags"
+    run_pipeline "$input_file" "$text_col" "$output_dir" "$mode" "$dry_run" "$skip_flags" "$sample_size" "$sample_seed"
 }
 
 # 스크립트 시작

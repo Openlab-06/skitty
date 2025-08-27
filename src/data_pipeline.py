@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 import polars as pl
 
-from src.config.data_config import DeduplicationConfig
+from src.config.data_config import DataConfig
 from src.utils.log import logger, log_performance
 from src.data.data_processing import dedup_csv_file
 from src.data.data_argumentation import DataArgumentation
@@ -25,10 +25,12 @@ class DataPipeline:
         
     @log_performance
     def run_full_pipeline(self, 
-                         text_col: str = DeduplicationConfig.TEXT_COL,
+                         text_col: str = DataConfig.TEXT_COL,
                          run_dedup: bool = True,
                          run_filtering: bool = True,
-                         run_argumentation: bool = True) -> None:
+                         run_argumentation: bool = True,
+                         sample_size: Optional[float] = None,
+                         sample_seed: Optional[int] = None) -> None:
         """
         전체 데이터 처리 파이프라인 실행
         
@@ -37,6 +39,8 @@ class DataPipeline:
             run_dedup: 중복제거 실행 여부
             run_filtering: 데이터 필터링 실행 여부
             run_argumentation: 데이터 증강 실행 여부
+            sample_size: 필터링용 샘플링 비율 (기본값: DataFilteringConfig.DEFAULT_SAMPLE_SIZE)
+            sample_seed: 샘플링 시드 (기본값: DataFilteringConfig.DEFAULT_SAMPLE_SEED)
         """
         logger.info("Starting full data pipeline")
         
@@ -59,7 +63,11 @@ class DataPipeline:
             # 2. 데이터 필터링 단계
             if run_filtering:
                 logger.info("=== Step 2: Data Filtering ===")
-                data_filter = DataFiltering(str(self.unique_output))
+                data_filter = DataFiltering(
+                    str(self.unique_output), 
+                    sample_size=sample_size, 
+                    sample_seed=sample_seed
+                )
                 data_filter.data_filter()
                 logger.info(f"Data filtering completed. Output: {self.final_output}")
             else:
@@ -115,11 +123,13 @@ def main():
     
     parser.add_argument("--input", required=True, help="입력 CSV 파일 경로")
     parser.add_argument("--output_dir", default="./src/data", help="출력 디렉토리")
-    parser.add_argument("--text_col", default=DeduplicationConfig.TEXT_COL, help="텍스트 컬럼명")
+    parser.add_argument("--text_col", default=DataConfig.TEXT_COL, help="텍스트 컬럼명")
     parser.add_argument("--skip_dedup", action="store_true", help="중복제거 건너뛰기")
     parser.add_argument("--skip_filtering", action="store_true", help="데이터 필터링 건너뛰기")
     parser.add_argument("--skip_aug", action="store_true", help="데이터 증강 건너뛰기")
     parser.add_argument("--status", action="store_true", help="파이프라인 상태 확인만")
+    parser.add_argument("--sample_size", type=float, help="필터링용 샘플링 비율 (예: 0.02)")
+    parser.add_argument("--sample_seed", type=int, help="샘플링 시드 (예: 42)")
     
     args = parser.parse_args()
     
@@ -135,7 +145,9 @@ def main():
             text_col=args.text_col,
             run_dedup=not args.skip_dedup,
             run_filtering=not args.skip_filtering,
-            run_argumentation=not args.skip_aug
+            run_argumentation=not args.skip_aug,
+            sample_size=args.sample_size,
+            sample_seed=args.sample_seed
         )
         return 0
     except Exception as e:

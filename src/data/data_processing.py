@@ -1,4 +1,4 @@
-from src.config.data_config import DeduplicationConfig
+from src.config.data_config import DataConfig
 from src.utils.log import logger, log_performance
 from src.data.data_io import DataFrameProcessor
 from src.data.data_dedup import DuplicateFinder
@@ -7,9 +7,9 @@ import polars as pl
 
 @log_performance
 def dedup_csv_file(input_path: str, output_unique_path: str, output_dups_path: str,
-                  text_col: str = DeduplicationConfig.TEXT_COL,
-                  hamming_distance: int = DeduplicationConfig.SIMHASH_K,
-                  ngram_size: int = DeduplicationConfig.NGRAM_N) -> Tuple[pl.DataFrame, pl.DataFrame]:
+                  text_col: str = DataConfig.TEXT_COL,
+                  hamming_distance: int = DataConfig.SIMHASH_K,
+                  ngram_size: int = DataConfig.NGRAM_N) -> Tuple[pl.DataFrame, pl.DataFrame]:
     """
     CSV 파일 중복제거 메인 함수
     
@@ -59,19 +59,19 @@ def main():
     
     parser.add_argument("--input", required=True, help="입력 CSV 파일 경로")
     parser.add_argument("--out_unique", 
-                       default=DeduplicationConfig.DEFAULT_UNIQUE_OUTPUT,
+                       default=DataConfig.DEFAULT_UNIQUE_OUTPUT,
                        help="유니크 레코드 출력 경로")
     parser.add_argument("--out_dups", 
-                       default=DeduplicationConfig.DEFAULT_DUPS_OUTPUT,
+                       default=DataConfig.DEFAULT_DUPS_OUTPUT,
                        help="중복 분석 결과 출력 경로")
     parser.add_argument("--text_col", 
-                       default=DeduplicationConfig.TEXT_COL,
+                       default=DataConfig.TEXT_COL,
                        help="텍스트 컬럼명")
     parser.add_argument("--k", type=int, 
-                       default=DeduplicationConfig.SIMHASH_K,
+                       default=DataConfig.SIMHASH_K,
                        help="Simhash 해밍 거리 임계값 (0-64)")
     parser.add_argument("--ngram", type=int, 
-                       default=DeduplicationConfig.NGRAM_N,
+                       default=DataConfig.NGRAM_N,
                        help="Character n-gram 크기")
     
     args = parser.parse_args()

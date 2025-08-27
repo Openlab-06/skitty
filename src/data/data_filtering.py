@@ -2,6 +2,7 @@ from google import genai
 from google.genai import types
 import pandas as pd
 from src.config.env_config import get_config
+from src.config.data_config import DataConfig   
 from src.utils.log import logger, log_performance, decorator_log
 import logging
 from tqdm import tqdm
@@ -18,9 +19,14 @@ class DataComplexity(Enum):
     EXTREMELY_HIGH = 4
 
 class DataFiltering:
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, sample_size: float = None, sample_seed: int = None):
         self.client = genai.Client(api_key=env.GEMINI_API_KEY)
-        self.data = pd.read_parquet(file_path).sample(frac=0.02, random_state=42).reset_index(drop=True)
+        
+        # 파라미터가 제공되지 않으면 기본값 사용
+        frac = sample_size if sample_size is not None else DataConfig.DEFAULT_SAMPLE_SIZE
+        seed = sample_seed if sample_seed is not None else DataConfig.DEFAULT_SAMPLE_SEED
+        
+        self.data = pd.read_parquet(file_path).sample(frac=frac, random_state=seed).reset_index(drop=True)
         print(f"Data columns: {self.data.columns.tolist()}")
         print(f"Data shape: {self.data.shape}")
         

@@ -1,7 +1,11 @@
-class DeduplicationConfig:
+class DataConfig:
     # Simhash 설정
     SIMHASH_K = 3                  # 해밍 거리 임계값
     NGRAM_N = 5                    # char n-gram 크기
+
+    # 데이터 샘플 설정
+    DEFAULT_SAMPLE_SIZE = 0.02
+    DEFAULT_SAMPLE_SEED = 42
     
     # 컬럼 설정
     TEXT_COL = "CN"               # 입력 텍스트 컬럼명

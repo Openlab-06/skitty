@@ -290,6 +290,9 @@ class TestDataPipelineMain:
         mock_args.skip_dedup = False
         mock_args.skip_filtering = False
         mock_args.skip_aug = False
+        # 새로운 매개변수 추가
+        mock_args.sample_size = 1000
+        mock_args.sample_seed = 42
         mock_parser.parse_args.return_value = mock_args
         
         # Mock DataPipeline
@@ -300,11 +303,14 @@ class TestDataPipelineMain:
         
         # 검증
         assert result == 0
+        # 새로운 매개변수를 포함한 호출 검증
         mock_pipeline_instance.run_full_pipeline.assert_called_once_with(
             text_col="text",
             run_dedup=True,
             run_filtering=True,
-            run_argumentation=True
+            run_argumentation=True,
+            sample_size=1000,
+            sample_seed=42
         )
 
     @patch('argparse.ArgumentParser')

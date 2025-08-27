@@ -1,0 +1,87 @@
+# 기본 모델 설정
+base_model: google/gemma-3-4b-it
+
+# 학습 과정에서 pretrain된 모델을 4bit로 로드하는 옵션
+load_in_4bit: true
+
+# gemma3 doesn't seem to play nice with ddp
+ddp_find_unused_parameters: true
+
+# instruction output 형식은 axolotl에서 alpaca 형식으로 제공
+datasets:
+  - path: yahma/alpaca-cleaned
+    type: alpaca
+
+val_set_size: 0.01
+output_dir: ./outputs/gemma3
+
+adapter: qlora
+lora_model_dir:
+
+# 시퀀스 길이 : 모델의 한 번의 요청에서 처리할 수 있는 최대 길이
+sequence_len: 512
+# 모델의 seq_len에 맞게 데이터를 packing하여 처리하는 옵션
+sample_packing: true
+
+# lora 파라미터 설정
+# 기본적으로 lora는 사전학습된 모델의 가중치는 고정하고, 차원을 축소시킨 adapter를 학습을 시키고, 학습이 끝난 후, 다시 원래 차원을 scailing을 하는 또 하나의 adapter를 사전학습된 모델에 더하는 학습방식
+lora_r: 32 # 
+lora_alpha: 16
+lora_dropout: 0.05
+# attention layer와 mlp layer에 lora adapter 적용
+lora_target_modules: 'model.language_model.layers.[\d]+.(mlp|cross_attn|self_attn).(up|down|gate|q|k|v|o)_proj'
+
+# train monitoring
+# 프로젝트 이름
+wandb_project: skitty-spam_filering
+wandb_entity:
+wandb_watch:
+wandb_name:
+wandb_log_model:
+
+# 기울기 누적
+gradient_accumulation_steps: 4
+# 배치 사이즈
+micro_batch_size: 2
+num_epochs: 5
+# 옵티마이저
+optimizer: adamw_bnb_8bit
+# 스케줄러 -> 이를 통해서 학습률을 cosine 함수에 따라서 점차 0에 가까워지도록 학습 진행
+lr_scheduler: cosine
+# 학습률
+learning_rate: 0.0002
+# 데이터 타입
+bf16: true
+fp16:
+tf32: true
+
+# 모델의 기울기를 저장 -> 이를 통해 기존에는 모델의 기울기를 저장하지 않으면 이를 학습과정에서 메모리에 담아두어야 하지만, 이를 매 step마다 저장하여 필요할 때만 메모리에 로드를 하므로 gpu 리소스 절약 가능
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+logging_steps: 100
+# 커널 최적화
+flash_attention: true
+eager_attention: true
+
+# 워밍업 비율
+warmup_ratio: 0.1
+evals_per_epoch: 1
+saves_per_epoch: 1
+weight_decay: 0.0
+
+# multi gpu 분산 학습을 위한 fsdp 설정
+fsdp:
+  - full_shard
+  - auto_wrap
+
+fsdp_config:
+  fsdp_version: 2
+  fsdp_offload_params: false # 파라미터 일부를 cpu로 offload 설정
+  fsdp_cpu_ram_efficient_loading: true
+  fsdp_auto_wrap_policy: TRANSFORMER_BASED_WRAP
+  fsdp_transformer_layer_cls_to_wrap: GemmaDecoderLayer # gemma model의 decoder layer를 자동으로 wrap
+  fsdp_state_dict_type: FULL_STATE_DICT
+  fsdp_sharding_strategy: FULL_SHARD # full -> model, gradient, optimizer 모두 샤딩
+  fsdp_reshard_after_forward: true # 순전파 후에 다시 sharding 수행
+  fsdp_activation_checkpointing: true 

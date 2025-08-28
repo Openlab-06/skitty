@@ -86,3 +86,24 @@ sh ./run_train.sh
 sh ./pytest.sh
 - 현재는 data 전처리에 대한 pytest 코드만 존재
 ```
+# 3. WBS Gantt Chatt(Week4)
+```mermaid
+gantt
+    title Skitty: On-Device LLM for Spam Filtering - Gantt
+    dateFormat  YYYY-MM-DD
+    axisFormat  %m/%d
+
+    section 환경구성
+    환경구성(1) - 데이터 수집(2025 spam data) :done, t01, 2025-08-25, 1d
+    환경구성(2) - Git 환경구성 :active, t02, after t01, 1d
+    환경구성(3) - project 문서 작성 :done, t03, after t02, 1d
+
+    section 데이터 전처리
+    데이터 전처리(1) - 중복제거 :active, t04, after t03, 1d
+    데이터 전처리(2) - 데이터 필터링(curriculum learning) :active, t05, after t04, 1d
+    데이터 전처리(3) - 데이터 증강 :active, t06, after t05, 3d
+    데이터 전처리(4) - 데이터 전처리 쉘 스크립트 작성 :active, t07, after t06, 3d
+
+    section sLLM Modeling
+    sLLM Modeling(1) - yaml 작성(SFT) :active, t08, after t07, 1d
+    sLLM Modeling(2) - train 쉘 스크립트 작성 :active, t09, after t08, 1d

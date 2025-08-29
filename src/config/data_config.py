@@ -4,7 +4,7 @@ class DataConfig:
     NGRAM_N = 5                    # char n-gram 크기
 
     # 데이터 샘플 설정
-    DEFAULT_SAMPLE_SIZE = 0.02
+    DEFAULT_SAMPLE_SIZE = 0.05
     DEFAULT_SAMPLE_SEED = 42
     
     # 컬럼 설정

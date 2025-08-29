@@ -6,17 +6,11 @@ from src.config.data_config import DataConfig
 from src.utils.log import logger, log_performance, decorator_log
 import logging
 from tqdm import tqdm
-from enum import Enum
-import time
+from src.domain.data_enum import DataComplexity
+import asyncio
+from src.utils.exception import DataFilteringError
 
 env = get_config()
-
-class DataComplexity(Enum):
-    LOW = 0
-    MEDIUM = 1
-    HIGH = 2
-    VERY_HIGH = 3
-    EXTREMELY_HIGH = 4
 
 class DataFiltering:
     def __init__(self, file_path: str, sample_size: float = None, sample_seed: int = None):
@@ -27,8 +21,8 @@ class DataFiltering:
         seed = sample_seed if sample_seed is not None else DataConfig.DEFAULT_SAMPLE_SEED
         
         self.data = pd.read_parquet(file_path).sample(frac=frac, random_state=seed).reset_index(drop=True)
-        print(f"Data columns: {self.data.columns.tolist()}")
-        print(f"Data shape: {self.data.shape}")
+        logger.info(f"Data columns: {self.data.columns.tolist()}")
+        logger.info(f"Data shape: {self.data.shape}")
         
         self.prompt_template = """
         현재 주어진 텍스트는 스팸 문자 데이터입니다.
@@ -49,14 +43,14 @@ class DataFiltering:
 
     @decorator_log(level=logging.INFO)
     @log_performance
-    def data_filter(self):
+    async def data_filter(self):
         output_list = []
         for idx, row in tqdm(self.data.iterrows(), total=len(self.data), desc="SPAM FILTER", unit="row"):
             text = row["CN"]
             try:
                 prompt = self.prompt_template.format(text=text)  # 템플릿에 텍스트 삽입
                 
-                resp = self.client.models.generate_content(
+                resp = await self.client.aio.models.generate_content(
                     model=env.GEMINI_MODEL_FILTER,
                     contents=prompt,  # 포맷된 프롬프트 사용
                     config={
@@ -70,14 +64,15 @@ class DataFiltering:
                 
             except Exception as e:
                 logger.error(f"[SPAM FILTER] idx={idx} failed: {e}")
-                output_list.append("LOW")  # 기본값 설정
+                raise DataFilteringError(error=str(e), status_code=500) from e
         
         self.data["complexity"] = output_list
-        time.sleep(1)
+        #self.data["complexity"] = self.data["complexity"].astype(int)
+
+        #self.data = self.data[self.data["complexity"] >= 3]
         self.data.to_csv("./src/data/filter_spam.csv", index=False)
 
 if __name__ == "__main__":
     dfilt = DataFiltering(file_path="./src/data/deduplicated_result.parquet")
-    print(f"Sampled data size: {len(dfilt.data)}")
-    
-    dfilt.data_filter()
+    logger.info(f"Sampled data size: {len(dfilt.data)}")
+    asyncio.run(dfilt.data_filter())

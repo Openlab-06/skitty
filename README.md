@@ -44,29 +44,33 @@ uv sync
 ---
 
 # 1. 프로젝트 구조
+### `src/config`
+- YAML 기반 설정 파일 관리
+- 훈련 하이퍼파라미터 및 모델 설정
+- 평가 및 배포 환경별 구성 정의
+
 ### `src/data`
 - 스팸 문자 데이터셋 전처리 및 정제
 - 중복 제거, 라벨링, 데이터 검증 로직
 - 훈련/검증/테스트 데이터 분할 관리
+
+### `src/domain`
+- 데이터 처리 로직에서 공통으로 사용하는 비즈니스 개념 정의
+- 엔티티(Entity), 값 객체(Value Object), 도메인 서비스 등의 핵심 규칙 구현
+
+### `src/utils`
+- 공통 유틸리티 함수 및 헬퍼 모듈
 
 ### `src/optimizer`
 - Pruning 알고리즘 구현 (구조적/비구조적 가지치기)
 - 양자화 모듈 (GPTQ, GGUF Q4_K_M 지원)
 - 모델 압축 및 최적화 유틸리티
 
-### `src/utils`
-- 공통 유틸리티 함수 및 헬퍼 모듈
-
-### `src/configs`
-- YAML 기반 설정 파일 관리
-- 훈련 하이퍼파라미터 및 모델 설정
-- 평가 및 배포 환경별 구성 정의
-
 ### `eval`
 - 모델 성능 평가 스크립트
 - Extract Match 및 LLM as a Judge 평가 방법론
 
-### `test`
+### `tests`
 - 단위 테스트 및 통합 테스트
 - 데이터 전처리 파이프라인 테스트
 - 모델 훈련 및 추론 기능 검증
@@ -83,7 +87,7 @@ sh ./run_train.sh
 ```
 3. 테스트 코드 실행
 ```
-sh ./pytest.sh
+sh ./run_pytest.sh
 - 현재는 data 전처리에 대한 pytest 코드만 존재
 ```
 # 3. WBS Gantt Chatt(Week4)

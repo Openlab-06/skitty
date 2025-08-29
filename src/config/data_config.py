@@ -20,3 +20,7 @@ class DataConfig:
     DEFAULT_UNIQUE_OUTPUT = "./src/data/deduplicated_result.parquet"
     DEFAULT_DUPS_OUTPUT = "./src/data/duplicate_analysis.parquet"
     COMPRESSION = "snappy"
+
+    # 배치 설정
+    DEFAULT_FILTER_BATCH_SIZE = 20
+    DEFAULT_AUG_BATCH_SIZE = 20

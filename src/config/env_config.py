@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
-import os
+from src.utils.log import logger
 
 @lru_cache
 def get_project_root():
@@ -15,6 +15,10 @@ class ProjectConfig(BaseSettings):
     GEMINI_API_KEY: str
     GEMINI_MODEL_ARGU: str
     GEMINI_MODEL_FILTER: str
+
+    # OpenAI API 설정 (페일오버용, 선택적)
+    OPENAI_API_KEY: str = None  # 없으면 페일오버 비활성화
+    OPENAI_MODEL: str = None
     
     model_config = ConfigDict(
         env_file=".env",
@@ -25,4 +29,8 @@ class ProjectConfig(BaseSettings):
 @lru_cache
 def get_config():
     """환경설정 싱글톤 반환"""
-    return ProjectConfig()
+    try:
+        return ProjectConfig()
+    except Exception as e:
+        logger.error(f"Failed to load environment variables: {e}")
+        raise e

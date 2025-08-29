@@ -49,8 +49,10 @@ model_name = config.GEMINI_MODEL_ARGU
 ```bash
 # .env 파일 예시
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL_ARGU=gemini-1.5-pro
-GEMINI_MODEL_FILTER=gemini-1.5-flash
+GEMINI_MODEL_ARGU=gemini-2.5-flash
+GEMINI_MODEL_FILTER=gemini-2.5-flash-lite
+OPENAI_API_KEY=your_gpt_api_key_here
+OPENAI_MODEL=gpt-4.1-mini # 5의 경우 reasoning_effort를 low로 주어도 상대적으로 추론 시간이 길어 gpt-4.1-mini 채택
 ```
 
 **⚠️ 보안 주의사항:**

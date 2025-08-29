@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 데이터 처리 파이프라인 자동화 스크립트
+# 데이터 처리 파이프라인 자동화 스크립트 (배치 처리 버전)
 # 사용법: ./run_data_pipeline.sh [입력파일] [옵션들]
 
 set -e  # 오류 발생 시 스크립트 중단
@@ -8,6 +8,8 @@ set -e  # 오류 발생 시 스크립트 중단
 # 기본 설정
 DEFAULT_INPUT_FILE="./src/data/raw_spam_2025.csv"
 DEFAULT_TEXT_COL="CN"
+DEFAULT_FILTER_BATCH_SIZE=20  # 필터링 배치 크기
+DEFAULT_AUG_BATCH_SIZE=20     # 증강 배치 크기
 DEFAULT_OUTPUT_DIR="./src/data"
 
 # 색상 설정

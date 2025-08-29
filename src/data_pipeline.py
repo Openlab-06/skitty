@@ -30,7 +30,9 @@ class DataPipeline:
                          run_filtering: bool = True,
                          run_argumentation: bool = True,
                          sample_size: Optional[float] = None,
-                         sample_seed: Optional[int] = None) -> None:
+                         sample_seed: Optional[int] = None,
+                         filter_batch_size: int = DataConfig.DEFAULT_FILTER_BATCH_SIZE,
+                         aug_batch_size: int = DataConfig.DEFAULT_AUG_BATCH_SIZE) -> None:
         """
         전체 데이터 처리 파이프라인 실행
         
@@ -41,6 +43,8 @@ class DataPipeline:
             run_argumentation: 데이터 증강 실행 여부
             sample_size: 필터링용 샘플링 비율 (기본값: DataFilteringConfig.DEFAULT_SAMPLE_SIZE)
             sample_seed: 샘플링 시드 (기본값: DataFilteringConfig.DEFAULT_SAMPLE_SEED)
+            filter_batch_size: 필터링 배치 크기 (기본값: 5)
+            aug_batch_size: 증강 배치 크기 (기본값: 3)
         """
         logger.info("Starting full data pipeline")
         
@@ -66,9 +70,11 @@ class DataPipeline:
                 data_filter = DataFiltering(
                     str(self.unique_output), 
                     sample_size=sample_size, 
-                    sample_seed=sample_seed
+                    sample_seed=sample_seed,
+                    batch_size=filter_batch_size
                 )
-                data_filter.data_filter()
+                import asyncio
+                asyncio.run(data_filter.data_filter())
                 logger.info(f"Data filtering completed. Output: {self.final_output}")
             else:
                 logger.info("Skipping data filtering step")
@@ -78,8 +84,9 @@ class DataPipeline:
                 logger.info("=== Step 3: Data Argumentation ===")
                 # 필터링이 실행된 경우 필터링 결과를 사용, 아니면 중복제거 결과 사용
                 input_file = str(self.final_output) if run_filtering and self.final_output.exists() else str(self.unique_output)
-                data_aug = DataArgumentation(input_file)
-                data_aug.data_argumentation()
+                data_aug = DataArgumentation(input_file, batch_size=aug_batch_size)
+                import asyncio
+                asyncio.run(data_aug.data_argumentation())
                 logger.info(f"Data argumentation completed. Output: {self.final_output}")
             else:
                 logger.info("Skipping data argumentation step")
@@ -130,6 +137,8 @@ def main():
     parser.add_argument("--status", action="store_true", help="파이프라인 상태 확인만")
     parser.add_argument("--sample_size", type=float, help="필터링용 샘플링 비율 (예: 0.02)")
     parser.add_argument("--sample_seed", type=int, help="샘플링 시드 (예: 42)")
+    parser.add_argument("--filter_batch_size", type=int, default=5, help="필터링 배치 크기 (기본값: 5)")
+    parser.add_argument("--aug_batch_size", type=int, default=3, help="증강 배치 크기 (기본값: 3)")
     
     args = parser.parse_args()
     
@@ -147,7 +156,9 @@ def main():
             run_filtering=not args.skip_filtering,
             run_argumentation=not args.skip_aug,
             sample_size=args.sample_size,
-            sample_seed=args.sample_seed
+            sample_seed=args.sample_seed,
+            filter_batch_size=args.filter_batch_size,
+            aug_batch_size=args.aug_batch_size
         )
         return 0
     except Exception as e:

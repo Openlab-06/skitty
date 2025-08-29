@@ -1,4 +1,4 @@
-"""개별 데이터 처리 모듈 단위 테스트"""
+"""데이터 중복제거, 정규화, I/O 모듈 단위 테스트"""
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import polars as pl

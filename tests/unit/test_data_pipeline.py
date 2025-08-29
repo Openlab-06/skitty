@@ -42,7 +42,8 @@ class TestDataPipeline:
     @patch('src.data_pipeline.DataFiltering') 
     @patch('src.data_pipeline.dedup_csv_file')
     @patch('src.data_pipeline.logger')
-    def test_run_full_pipeline_all_steps(self, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
+    @patch('asyncio.run')  # asyncio.run 모킹 추가
+    def test_run_full_pipeline_all_steps(self, mock_asyncio_run, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
         """모든 단계가 실행되는 경우 테스트"""
         # Mock 설정
         mock_exists.return_value = True  # 모든 파일이 존재한다고 가정
@@ -63,8 +64,8 @@ class TestDataPipeline:
         
         # 검증
         mock_dedup.assert_called_once()
-        mock_filtering_instance.data_filter.assert_called_once()
-        mock_aug_instance.data_argumentation.assert_called_once()
+        # asyncio.run이 두 번 호출되었는지 확인 (filtering + argumentation)
+        assert mock_asyncio_run.call_count == 2
         
         # 로그 메시지 확인
         assert mock_logger.info.call_count >= 5
@@ -74,7 +75,8 @@ class TestDataPipeline:
     @patch('src.data_pipeline.DataFiltering')
     @patch('src.data_pipeline.dedup_csv_file')
     @patch('src.data_pipeline.logger')
-    def test_run_full_pipeline_skip_dedup(self, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
+    @patch('asyncio.run')
+    def test_run_full_pipeline_skip_dedup(self, mock_asyncio_run, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
         """중복제거 건너뛰기 테스트"""
         # unique_output과 final_output 파일이 존재한다고 모킹
         mock_exists.return_value = True
@@ -90,8 +92,8 @@ class TestDataPipeline:
         
         # 검증
         mock_dedup.assert_not_called()
-        mock_filtering_instance.data_filter.assert_called_once()
-        mock_aug_instance.data_argumentation.assert_called_once()
+        # asyncio.run이 두 번 호출되었는지 확인
+        assert mock_asyncio_run.call_count == 2
 
     @patch('pathlib.Path.exists')
     @patch('src.data_pipeline.dedup_csv_file')
@@ -110,7 +112,8 @@ class TestDataPipeline:
     @patch('src.data_pipeline.DataFiltering')
     @patch('src.data_pipeline.dedup_csv_file')
     @patch('src.data_pipeline.logger')
-    def test_run_full_pipeline_skip_filtering(self, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
+    @patch('asyncio.run')
+    def test_run_full_pipeline_skip_filtering(self, mock_asyncio_run, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
         """데이터 필터링 건너뛰기 테스트"""
         # Mock 설정
         mock_exists.return_value = True
@@ -129,16 +132,18 @@ class TestDataPipeline:
         # 검증
         mock_dedup.assert_called_once()
         mock_filtering_class.assert_not_called()
-        mock_aug_instance.data_argumentation.assert_called_once()
+        # asyncio.run이 한 번만 호출되었는지 확인 (argumentation만)
+        assert mock_asyncio_run.call_count == 1
         
         # 증강 단계에서 unique_output을 입력으로 사용했는지 확인
-        mock_aug_class.assert_called_with(str(pipeline.unique_output))
+        mock_aug_class.assert_called_with(str(pipeline.unique_output), batch_size=20)
 
     @patch('pathlib.Path.exists')
     @patch('src.data_pipeline.DataFiltering')
     @patch('src.data_pipeline.dedup_csv_file')
     @patch('src.data_pipeline.logger')
-    def test_run_full_pipeline_skip_argumentation(self, mock_logger, mock_dedup, mock_filtering_class, mock_exists, pipeline):
+    @patch('asyncio.run')
+    def test_run_full_pipeline_skip_argumentation(self, mock_asyncio_run, mock_logger, mock_dedup, mock_filtering_class, mock_exists, pipeline):
         """데이터 증강 건너뛰기 테스트"""
         # Mock 설정
         mock_exists.return_value = True
@@ -156,7 +161,8 @@ class TestDataPipeline:
         
         # 검증
         mock_dedup.assert_called_once()
-        mock_filtering_instance.data_filter.assert_called_once()
+        # asyncio.run이 한 번만 호출되었는지 확인 (filtering만)
+        assert mock_asyncio_run.call_count == 1
 
     @patch('pathlib.Path.exists')
     @patch('src.data_pipeline.dedup_csv_file')
@@ -224,7 +230,8 @@ class TestDataPipeline:
 
     @patch('pathlib.Path.exists')
     @patch('src.data_pipeline.DataArgumentation')
-    def test_argumentation_input_selection(self, mock_aug_class, mock_exists, pipeline):
+    @patch('asyncio.run')
+    def test_argumentation_input_selection(self, mock_asyncio_run, mock_aug_class, mock_exists, pipeline):
         """데이터 증강 단계에서 입력 파일 선택 로직 테스트"""
         # 필터링이 실행되고 final_output이 존재하는 경우
         mock_exists.return_value = True
@@ -237,7 +244,7 @@ class TestDataPipeline:
             pipeline.run_full_pipeline(run_dedup=False, run_filtering=False, run_argumentation=True)
         
         # final_output을 입력으로 사용했는지 확인 (하지만 run_filtering=False이므로 unique_output 사용)
-        mock_aug_class.assert_called_with(str(pipeline.unique_output))
+        mock_aug_class.assert_called_with(str(pipeline.unique_output), batch_size=20)
 
 
 class TestDataPipelineMain:
@@ -310,7 +317,9 @@ class TestDataPipelineMain:
             run_filtering=True,
             run_argumentation=True,
             sample_size=1000,
-            sample_seed=42
+            sample_seed=42,
+            filter_batch_size=mock_args.filter_batch_size,
+            aug_batch_size=mock_args.aug_batch_size
         )
 
     @patch('argparse.ArgumentParser')

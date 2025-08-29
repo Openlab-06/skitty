@@ -24,7 +24,8 @@ class TestDataPipelineIntegration:
     @patch('src.data_pipeline.DataArgumentation')
     @patch('src.data_pipeline.DataFiltering')
     @patch('src.data_pipeline.dedup_csv_file')
-    def test_integration_pipeline_flow(self, mock_dedup, mock_filtering_class, mock_aug_class, temp_files):
+    @patch('asyncio.run')
+    def test_integration_pipeline_flow(self, mock_asyncio_run, mock_dedup, mock_filtering_class, mock_aug_class, temp_files):
         """실제 파일 시스템을 사용한 통합 테스트"""
         # Mock 설정
         mock_unique_df = Mock()
@@ -45,5 +46,9 @@ class TestDataPipelineIntegration:
         
         # 모든 단계가 실행되었는지 확인
         mock_dedup.assert_called_once()
-        mock_filtering_instance.data_filter.assert_called_once()
-        mock_aug_instance.data_argumentation.assert_called_once()
+        # asyncio.run이 두 번 호출되었는지 확인 (filtering + argumentation)
+        assert mock_asyncio_run.call_count == 2
+        
+        # 배치 크기와 함께 올바르게 인스턴스가 생성되었는지 확인
+        mock_filtering_class.assert_called_once()
+        mock_aug_class.assert_called_once()

@@ -5,6 +5,7 @@ from src.config.env_config import get_config
 from src.utils.log import logger, log_performance, decorator_log
 import logging
 from tqdm import tqdm
+from src.utils.exception import DataArgumentationError  
 
 logging.basicConfig(level=logging.INFO)
 
@@ -53,7 +54,7 @@ class DataArgumentation:
                 logger.info(f"[SPAM AUG] idx={idx} result={result} success")
             except Exception as e:
                 logger.error(f"[SPAM AUG] idx={idx} failed: {e}")
-                output_list.append("")  # 실패시 빈 문자열
+                raise DataArgumentationError(error=str(e), status_code=500) from e
         
         self.data["output"] = output_list
         self.data.to_csv("./src/data/final_spam.csv", index=False)

@@ -78,16 +78,16 @@ uv sync
 # 2. 프로젝트 실행 및 테스트
 1. 데이터 전처리 실행
 ```
-sh ./run_data_pipeline.py
+sh ./scripts/run_data_pipeline.py
 ```
 2. 파인튜닝 실행(클라우드에서만 수행가능) 
 ```
-sh ./run_train.sh
+sh ./scripts/run_train.sh
 - 추후 apple 실리콘 환경에서의 학습 코드 추가 예정
 ```
 3. 테스트 코드 실행
 ```
-sh ./run_pytest.sh
+sh ./scripts/run_pytest.sh
 - 현재는 data 전처리에 대한 pytest 코드만 존재
 ```
 # 3. WBS Gantt Chatt(Week4)

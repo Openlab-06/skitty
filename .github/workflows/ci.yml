@@ -59,9 +59,9 @@ jobs:
 
       - name: Run tests
         run: |
-          chmod +x ./run_pytest.sh 2>/dev/null || true
-          if [ -f "run_pytest.sh" ]; then
-            ./run_pytest.sh
+          chmod +x ./scripts/run_pytest.sh 2>/dev/null || true
+          if [ -f "scripts/run_pytest.sh" ]; then
+            ./scripts/run_pytest.sh
           else
             # 빠른 피드백을 위해 실패 1건에서 중단 + 짧은 출력
             uv run pytest -q --maxfail=1 --disable-warnings --junitxml=pytest-report.xml

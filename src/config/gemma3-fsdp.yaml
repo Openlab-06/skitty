@@ -9,10 +9,15 @@ ddp_find_unused_parameters: true
 
 # instruction output 형식은 axolotl에서 alpaca 형식으로 제공
 datasets:
-  - path: yahma/alpaca-cleaned
+  - path: Devocean-06/Spam_QA-Corpus
     type: alpaca
+    split: train
+    
+test-datasets:
+  - path: Devocean-06/Spam_QA-Corpus
+    type: alpaca
+    split: validation
 
-val_set_size: 0.01
 output_dir: ./outputs/gemma3
 
 adapter: qlora
@@ -62,12 +67,15 @@ gradient_checkpointing_kwargs:
 logging_steps: 100
 # 커널 최적화
 flash_attention: true
-eager_attention: true
+eager_attention: false
 
 # 워밍업 비율
-warmup_ratio: 0.1
-evals_per_epoch: 1
-saves_per_epoch: 1
+warmup_ratio: 0.05
+warmup_steps: 10
+eval_steps: 50
+save_steps: 50 
+save_strategy: 'steps'     
+eval_strategy: 'steps'
 weight_decay: 0.0
 
 # multi gpu 분산 학습을 위한 fsdp 설정

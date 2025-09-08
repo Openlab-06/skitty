@@ -9,10 +9,15 @@ ddp_find_unused_parameters: true
 
 # instruction output 형식은 axolotl에서 alpaca 형식으로 제공
 datasets:
-  - path: yahma/alpaca-cleaned
+  - path: Devocean-06/Spam_QA-Corpus
     type: alpaca
+    split: train
+    
+test-datasets:
+  - path: Devocean-06/Spam_QA-Corpus
+    type: alpaca
+    split: validation
 
-val_set_size: 0.01
 output_dir: ./outputs/gemma3
 
 adapter: qlora
@@ -43,29 +48,33 @@ wandb_log_model:
 gradient_accumulation_steps: 4
 # 배치 사이즈
 micro_batch_size: 2
-num_epochs: 5
+num_epochs: 8
 # 옵티마이저
 optimizer: adamw_bnb_8bit
 # 스케줄러 -> 이를 통해서 학습률을 cosine 함수에 따라서 점차 0에 가까워지도록 학습 진행
 lr_scheduler: cosine
 # 학습률
-learning_rate: 0.0002
+learning_rate: 0.00002
 # 데이터 타입
 bf16: true
 fp16:
-tf32: true
+tf32: false
 
 # 모델의 기울기를 저장 -> 이를 통해 기존에는 모델의 기울기를 저장하지 않으면 이를 학습과정에서 메모리에 담아두어야 하지만, 이를 매 step마다 저장하여 필요할 때만 메모리에 로드를 하므로 gpu 리소스 절약 가능
 gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
 logging_steps: 100
+
 # 커널 최적화
 flash_attention: true
 eager_attention: true
 
 # 워밍업 비율
-warmup_ratio: 0.1
-evals_per_epoch: 1
-saves_per_epoch: 1
+warmup_ratio: 0.05
+warmup_steps: 10
+eval_steps: 50
+save_steps: 50 
+save_strategy: 'steps'     
+eval_strategy: 'steps'
 weight_decay: 0.0

@@ -69,3 +69,19 @@ warmup_ratio: 0.1
 evals_per_epoch: 1
 saves_per_epoch: 1
 weight_decay: 0.0
+
+# multi gpu 분산 학습을 위한 fsdp 설정
+fsdp:
+  - full_shard
+  - auto_wrap
+
+fsdp_config:
+  fsdp_version: 2
+  fsdp_offload_params: false # 파라미터 일부를 cpu로 offload 설정
+  fsdp_cpu_ram_efficient_loading: true
+  fsdp_auto_wrap_policy: TRANSFORMER_BASED_WRAP
+  fsdp_transformer_layer_cls_to_wrap: GemmaDecoderLayer # gemma model의 decoder layer를 자동으로 wrap
+  fsdp_state_dict_type: FULL_STATE_DICT
+  fsdp_sharding_strategy: FULL_SHARD # full -> model, gradient, optimizer 모두 샤딩
+  fsdp_reshard_after_forward: true # 순전파 후에 다시 sharding 수행
+  fsdp_activation_checkpointing: true 

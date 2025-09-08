@@ -1,9 +1,6 @@
 # 기본 모델 설정
 base_model: google/gemma-3-4b-it
 
-# 학습 과정에서 pretrain된 모델을 4bit로 로드하는 옵션
-load_in_4bit: true
-
 # gemma3 doesn't seem to play nice with ddp
 ddp_find_unused_parameters: true
 
@@ -15,21 +12,13 @@ datasets:
 val_set_size: 0.01
 output_dir: ./outputs/gemma3
 
-adapter: qlora
+adapter: 
 lora_model_dir:
 
 # 시퀀스 길이 : 모델의 한 번의 요청에서 처리할 수 있는 최대 길이
 sequence_len: 512
 # 모델의 seq_len에 맞게 데이터를 packing하여 처리하는 옵션
 sample_packing: true
-
-# lora 파라미터 설정
-# 기본적으로 lora는 사전학습된 모델의 가중치는 고정하고, 차원을 축소시킨 adapter를 학습을 시키고, 학습이 끝난 후, 다시 원래 차원을 scailing을 하는 또 하나의 adapter를 사전학습된 모델에 더하는 학습방식
-lora_r: 32 # 
-lora_alpha: 16
-lora_dropout: 0.05
-# attention layer와 mlp layer에 lora adapter 적용
-lora_target_modules: 'model.language_model.layers.[\d]+.(mlp|cross_attn|self_attn).(up|down|gate|q|k|v|o)_proj'
 
 # train monitoring
 # 프로젝트 이름

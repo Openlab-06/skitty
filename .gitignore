@@ -8,3 +8,7 @@ __pycache__/
 .env
 .coverage
 htmlcov/
+outputs/
+wandb/
+last_run_prepared/
+cuda-keyring_1.0-1_all.deb

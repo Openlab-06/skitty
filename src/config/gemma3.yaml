@@ -24,7 +24,7 @@ adapter: qlora
 lora_model_dir:
 
 # 시퀀스 길이 : 모델의 한 번의 요청에서 처리할 수 있는 최대 길이
-sequence_len: 512
+sequence_len: 1500
 # 모델의 seq_len에 맞게 데이터를 packing하여 처리하는 옵션
 sample_packing: true
 
@@ -71,7 +71,6 @@ flash_attention: true
 eager_attention: true
 
 # 워밍업 비율
-warmup_ratio: 0.05
 warmup_steps: 10
 eval_steps: 50
 save_steps: 50 

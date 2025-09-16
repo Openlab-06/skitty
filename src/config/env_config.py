@@ -16,6 +16,11 @@ class ProjectConfig(BaseSettings):
     GEMINI_MODEL_ARGU: str
     GEMINI_MODEL_FILTER: str
 
+    # spam model
+    SPAM_MODEL: str
+    SPAM_MODEL_URL: str
+    SPAM_MODEL_API_KEY: str
+
     # OpenAI API 설정 (페일오버용, 선택적)
     OPENAI_API_KEY: str = None  # 없으면 페일오버 비활성화
     OPENAI_MODEL: str = None

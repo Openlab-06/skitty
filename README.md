@@ -90,7 +90,7 @@ sh ./scripts/run_train.sh
 sh ./scripts/run_pytest.sh
 - 현재는 data 전처리에 대한 pytest 코드만 존재
 ```
-# 3. WBS Gantt Chatt(Week4)
+# 3. WBS Gantt Chatt(Week5)
 ```mermaid
 gantt
     title Skitty: On-Device LLM for Spam Filtering - Gantt
@@ -111,3 +111,12 @@ gantt
     section sLLM Modeling
     sLLM Modeling(1) - yaml 작성(SFT) :active, t08, after t07, 1d
     sLLM Modeling(2) - train 쉘 스크립트 작성 :active, t09, after t08, 1d
+
+    section sLLM Quantization & Pruning
+    sLLM Pruning :active, t10, 2025-09-14, 7d
+    sLLM Quantization :active, t11, 2025-09-14, 7d
+
+    section sLLM Evaluation
+    sLLM Evaluation(1) - 휴리스틱 평가 지표(BLEU, ROUGE) :active, t12, 2025-09-14, 7d
+    sLLM Evaluation(2) - LLM as a Judge :active, t13, 2025-09-14, 7d
+

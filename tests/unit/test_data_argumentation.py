@@ -82,7 +82,7 @@ class TestDataArgumentationInit:
         assert "개인 정보 요구" in data_aug.prompt
         assert "심리적 압박" in data_aug.prompt
         assert "링크/URL" in data_aug.prompt
-        assert "200자 이상으로" in data_aug.prompt
+        assert "100자 이상으로" in data_aug.prompt
 
 
 class TestProcessSingleText:

@@ -27,6 +27,9 @@ jobs:
       GEMINI_MODEL_FILTER: ${{ secrets.GEMINI_MODEL_FILTER }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+      SPAM_MODEL: ${{ secrets.SPAM_MODEL }}
+      SPAM_MODEL_URL: ${{ secrets.SPAM_MODEL_URL }}
+      SPAM_MODEL_API_KEY: ${{ secrets.SPAM_MODEL_API_KEY }} 
 
     steps:
       - name: Checkout

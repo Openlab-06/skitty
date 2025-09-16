@@ -1,7 +1,7 @@
 # pytest 실행 스크립트
 # 커버리지와 함께 테스트 실행
 
-echo "🧪 데이터 처리 모듈 테스트 시작..."
+echo "🧪 테스트 시작..."
 
 # uv를 통해 pytest 실행 (커버리지 포함)
 uv run pytest tests/ \

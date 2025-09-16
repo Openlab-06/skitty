@@ -57,10 +57,10 @@ class LLMEvaluation:
                 )
                 prediction = resp.choices[0].message.content.strip()
 
-                bleu = self.bleu.compute(prediction=prediction, references=[reference])
+                bleu = self.bleu.score(output=prediction, references=[reference])
                 bleu_scores.append(float(bleu))
 
-                rouge = self.rouge.compute(prediction=prediction, references=[reference])
+                rouge = self.rouge.score(output=prediction, references=[reference])
                 rouge_scores.append({k: float(v) for k, v in rouge.items()})
 
             except Exception as e:

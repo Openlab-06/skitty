@@ -22,6 +22,12 @@ jobs:
       UV_NO_SYNC_DOWNLOADS: 1
       UV_SYSTEM_PYTHON: 1
 
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL_ARGU: ${{ secrets.GEMINI_MODEL_ARGU }}
+      GEMINI_MODEL_FILTER: ${{ secrets.GEMINI_MODEL_FILTER }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4

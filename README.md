@@ -109,14 +109,14 @@ gantt
     데이터 전처리(4) - 데이터 전처리 쉘 스크립트 작성 :active, t07, after t06, 3d
 
     section sLLM Modeling
-    sLLM Modeling(1) - yaml 작성(SFT) :active, t08, after t07, 1d
-    sLLM Modeling(2) - train 쉘 스크립트 작성 :active, t09, after t08, 1d
-
-    section sLLM Quantization & Pruning
-    sLLM Pruning :active, t10, 2025-09-14, 7d
-    sLLM Quantization :active, t11, 2025-09-14, 7d
+    sLLM Modeling(1) - yaml 작성(SFT) :active, t08, after t07, 3d
+    sLLM Modeling(2) - train 쉘 스크립트 작성 :active, t09, after t08, 3d
 
     section sLLM Evaluation
-    sLLM Evaluation(1) - 휴리스틱 평가 지표(BLEU, ROUGE) :active, t12, 2025-09-14, 7d
-    sLLM Evaluation(2) - LLM as a Judge :active, t13, 2025-09-14, 7d
+    sLLM Evaluation(1) - 휴리스틱 평가 지표(BLEU, ROUGE) :active, t12, 2025-09-14, 4d
+    sLLM Evaluation(2) - LLM as a Judge :active, t13, after t12, 3d
+
+    section sLLM Quantization & Pruning
+    sLLM Pruning :active, t10, after t13, 4d
+    sLLM Quantization :active, t11, after t10, 4d
 

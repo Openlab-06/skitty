@@ -74,3 +74,29 @@ class LLMEvaluation:
         avg_rouge = {k: safe_mean([r[k] for r in rouge_scores]) for k in rouge_keys}
 
         return {"BLEU": avg_bleu, "ROUGE": avg_rouge}
+
+
+if __name__ == "__main__":
+    async def main():
+        """평가 실행을 위한 메인 함수"""
+        logger.info("LLM 평가를 시작합니다...")
+        
+        # 평가 인스턴스 생성 (limit을 설정하여 테스트 시 빠른 실행 가능)
+        evaluator = LLMEvaluation(limit=None)  # 전체 데이터셋 평가
+        
+        try:
+            results = await evaluator.evaluate()
+            
+            logger.info("평가 완료!")
+            logger.info("BLEU 점수: %.4f", results["BLEU"])
+            
+            rouge_scores = results["ROUGE"]
+            for metric, score in rouge_scores.items():
+                logger.info("%s 점수: %.4f", metric, score)
+                
+        except Exception as e:
+            logger.error("평가 중 오류 발생: %s", e)
+            raise
+    
+    # 비동기 메인 함수 실행
+    asyncio.run(main())

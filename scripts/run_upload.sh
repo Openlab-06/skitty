@@ -1,0 +1,1 @@
+huggingface-cli upload Devocean-06/Spam_Filter-gemma ./outputs/gemma3/merged

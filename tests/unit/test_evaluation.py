@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 import asyncio
-from eval.evaluation import LLMEvaluation, safe_mean
+import json
+from eval.evaluation import LLMEvaluation, safe_mean, EvaluationMetrics
 
 
 class TestSafeMean:
@@ -20,6 +21,32 @@ class TestSafeMean:
     def test_safe_mean_with_zeros(self):
         """0값들의 평균 계산 테스트"""
         assert safe_mean([0.0, 0.0, 0.0]) == 0.0
+
+
+class TestEvaluationMetrics:
+    """EvaluationMetrics 데이터클래스 테스트"""
+    
+    def test_evaluation_metrics_creation(self):
+        """EvaluationMetrics 인스턴스 생성 테스트"""
+        metrics = EvaluationMetrics(
+            sample_id=0,
+            prompt="테스트 프롬프트",
+            reference="레퍼런스 텍스트",
+            prediction="예측 텍스트",
+            bleu_score=0.8,
+            semantic_similarity=0.75,
+            llm_judge_score=0.9,
+            llm_judge_explanation="좋은 예측입니다."
+        )
+        
+        assert metrics.sample_id == 0
+        assert metrics.prompt == "테스트 프롬프트"
+        assert metrics.reference == "레퍼런스 텍스트"
+        assert metrics.prediction == "예측 텍스트"
+        assert metrics.bleu_score == 0.8
+        assert metrics.semantic_similarity == 0.75
+        assert metrics.llm_judge_score == 0.9
+        assert metrics.llm_judge_explanation == "좋은 예측입니다."
 
 
 class TestLLMEvaluationUnit:
@@ -44,7 +71,9 @@ class TestLLMEvaluationUnit:
     @patch('eval.evaluation.load_dataset')
     @patch('eval.evaluation.get_config')
     @patch('eval.evaluation.AsyncOpenAI')
-    def test_init_with_limit(self, mock_openai, mock_config, mock_load_dataset):
+    @patch('eval.evaluation.CrossEncoder')
+    @patch('eval.evaluation.SentenceBLEU')
+    def test_init_with_limit(self, mock_bleu, mock_cross_encoder, mock_openai, mock_config, mock_load_dataset):
         """limit 파라미터가 있는 생성자 테스트"""
         # Mock 설정
         mock_dataset = Mock()
@@ -55,23 +84,24 @@ class TestLLMEvaluationUnit:
         mock_env = Mock()
         mock_env.SPAM_MODEL_URL = "http://test.com"
         mock_env.SPAM_MODEL_API_KEY = "test-key"
-        mock_env.SPAM_MODEL = "test-model"
+        mock_env.OPENAI_API_KEY = "openai-test-key"
         mock_config.return_value = mock_env
         
         # 테스트 실행
-        evaluator = LLMEvaluation(limit=100)
+        evaluator = LLMEvaluation(limit=100, model_name="google/gemma-3-4b-it")
         
         # 검증
         mock_load_dataset.assert_called_once_with("Devocean-06/Spam_QA-Corpus", split="test")
         mock_dataset.select.assert_called_once_with(range(100))
-        # 실제 환경 설정에서 model_name은 다를 수 있으므로 존재 여부만 확인
-        assert hasattr(evaluator, 'model_name')
-        assert evaluator.model_name is not None
+        assert evaluator.model_name == "google/gemma-3-4b-it"
+        assert evaluator.judge_model_name == "gpt-4o"
     
     @patch('eval.evaluation.load_dataset')
     @patch('eval.evaluation.get_config')
     @patch('eval.evaluation.AsyncOpenAI')
-    def test_init_without_limit(self, mock_openai, mock_config, mock_load_dataset):
+    @patch('eval.evaluation.CrossEncoder')
+    @patch('eval.evaluation.SentenceBLEU')
+    def test_init_without_limit(self, mock_bleu, mock_cross_encoder, mock_openai, mock_config, mock_load_dataset):
         """limit 파라미터가 없는 생성자 테스트"""
         # Mock 설정
         mock_dataset = Mock()
@@ -80,7 +110,7 @@ class TestLLMEvaluationUnit:
         mock_env = Mock()
         mock_env.SPAM_MODEL_URL = "http://test.com"
         mock_env.SPAM_MODEL_API_KEY = "test-key"
-        mock_env.SPAM_MODEL = "test-model"
+        mock_env.OPENAI_API_KEY = "openai-test-key"
         mock_config.return_value = mock_env
         
         # 테스트 실행
@@ -94,7 +124,9 @@ class TestLLMEvaluationUnit:
         """input이 있는 경우 프롬프트 생성 테스트"""
         with patch('eval.evaluation.load_dataset'), \
              patch('eval.evaluation.get_config'), \
-             patch('eval.evaluation.AsyncOpenAI'):
+             patch('eval.evaluation.AsyncOpenAI'), \
+             patch('eval.evaluation.CrossEncoder'), \
+             patch('eval.evaluation.SentenceBLEU'):
             
             evaluator = LLMEvaluation()
             
@@ -114,7 +146,9 @@ class TestLLMEvaluationUnit:
         """input이 없는 경우 프롬프트 생성 테스트"""
         with patch('eval.evaluation.load_dataset'), \
              patch('eval.evaluation.get_config'), \
-             patch('eval.evaluation.AsyncOpenAI'):
+             patch('eval.evaluation.AsyncOpenAI'), \
+             patch('eval.evaluation.CrossEncoder'), \
+             patch('eval.evaluation.SentenceBLEU'):
             
             evaluator = LLMEvaluation()
             
@@ -133,7 +167,9 @@ class TestLLMEvaluationUnit:
         """공백 제거 테스트"""
         with patch('eval.evaluation.load_dataset'), \
              patch('eval.evaluation.get_config'), \
-             patch('eval.evaluation.AsyncOpenAI'):
+             patch('eval.evaluation.AsyncOpenAI'), \
+             patch('eval.evaluation.CrossEncoder'), \
+             patch('eval.evaluation.SentenceBLEU'):
             
             evaluator = LLMEvaluation()
             
@@ -148,6 +184,145 @@ class TestLLMEvaluationUnit:
             expected_prompt = "분류하세요.\n\nInput: 테스트 입력"
             assert prompt == expected_prompt
             assert reference == "테스트 출력"
+    
+    def test_calculate_semantic_similarity(self):
+        """의미론적 유사성 계산 테스트"""
+        with patch('eval.evaluation.load_dataset'), \
+             patch('eval.evaluation.get_config'), \
+             patch('eval.evaluation.AsyncOpenAI'), \
+             patch('eval.evaluation.SentenceBLEU'):
+            
+            # CrossEncoder mock 설정
+            mock_cross_encoder = Mock()
+            mock_cross_encoder.predict.return_value = [0.5]  # -1~1 범위
+            
+            with patch('eval.evaluation.CrossEncoder', return_value=mock_cross_encoder):
+                evaluator = LLMEvaluation()
+                
+                similarity = evaluator._calculate_semantic_similarity(
+                    "이것은 스팸입니다.", 
+                    "이것은 스팸 메시지입니다."
+                )
+                
+                # 0.5를 0~1 범위로 정규화: (0.5 + 1) / 2 = 0.75
+                assert similarity == 0.75
+                mock_cross_encoder.predict.assert_called_once()
+    
+    def test_calculate_semantic_similarity_error_handling(self):
+        """의미론적 유사성 계산 오류 처리 테스트"""
+        with patch('eval.evaluation.load_dataset'), \
+             patch('eval.evaluation.get_config'), \
+             patch('eval.evaluation.AsyncOpenAI'), \
+             patch('eval.evaluation.SentenceBLEU'):
+            
+            # CrossEncoder가 오류를 발생시키도록 설정
+            mock_cross_encoder = Mock()
+            mock_cross_encoder.predict.side_effect = Exception("Model error")
+            
+            with patch('eval.evaluation.CrossEncoder', return_value=mock_cross_encoder), \
+                 patch('eval.evaluation.logger') as mock_logger:
+                
+                evaluator = LLMEvaluation()
+                
+                similarity = evaluator._calculate_semantic_similarity(
+                    "텍스트1", 
+                    "텍스트2"
+                )
+                
+                # 오류 시 0.0 반환
+                assert similarity == 0.0
+                mock_logger.warning.assert_called_once()
+
+
+class TestLLMJudgeEvaluation:
+    """LLM Judge 평가 테스트"""
+    
+    @pytest.mark.asyncio
+    async def test_llm_judge_evaluation_success(self):
+        """LLM Judge 평가 성공 테스트"""
+        with patch('eval.evaluation.load_dataset'), \
+             patch('eval.evaluation.get_config'), \
+             patch('eval.evaluation.CrossEncoder'), \
+             patch('eval.evaluation.SentenceBLEU'):
+            
+            # Judge 모델 mock
+            mock_judge = AsyncMock()
+            mock_response = Mock()
+            mock_response.choices = [Mock()]
+            mock_response.choices[0].message.content = json.dumps({
+                "score": 0.85,
+                "explanation": "좋은 설명입니다."
+            })
+            mock_judge.chat.completions.create.return_value = mock_response
+            
+            with patch('eval.evaluation.AsyncOpenAI', return_value=mock_judge):
+                evaluator = LLMEvaluation()
+                
+                score, explanation = await evaluator._llm_judge_evaluation(
+                    reference="이것은 스팸입니다.",
+                    prediction="이것은 스팸 메시지입니다.",
+                    spam_text="무료 상품!"
+                )
+                
+                assert score == 0.85
+                assert explanation == "좋은 설명입니다."
+    
+    @pytest.mark.asyncio
+    async def test_llm_judge_evaluation_json_parse_error(self):
+        """LLM Judge JSON 파싱 오류 테스트"""
+        with patch('eval.evaluation.load_dataset'), \
+             patch('eval.evaluation.get_config'), \
+             patch('eval.evaluation.CrossEncoder'), \
+             patch('eval.evaluation.SentenceBLEU'):
+            
+            # 잘못된 JSON 응답
+            mock_judge = AsyncMock()
+            mock_response = Mock()
+            mock_response.choices = [Mock()]
+            mock_response.choices[0].message.content = "Invalid JSON"
+            mock_judge.chat.completions.create.return_value = mock_response
+            
+            with patch('eval.evaluation.AsyncOpenAI', return_value=mock_judge), \
+                 patch('eval.evaluation.logger') as mock_logger:
+                
+                evaluator = LLMEvaluation()
+                
+                score, explanation = await evaluator._llm_judge_evaluation(
+                    reference="레퍼런스",
+                    prediction="예측",
+                    spam_text="텍스트"
+                )
+                
+                assert score == 0.0
+                assert explanation == "JSON 파싱 실패"
+                mock_logger.warning.assert_called()
+    
+    @pytest.mark.asyncio
+    async def test_llm_judge_evaluation_api_error(self):
+        """LLM Judge API 오류 테스트"""
+        with patch('eval.evaluation.load_dataset'), \
+             patch('eval.evaluation.get_config'), \
+             patch('eval.evaluation.CrossEncoder'), \
+             patch('eval.evaluation.SentenceBLEU'):
+            
+            # API 오류
+            mock_judge = AsyncMock()
+            mock_judge.chat.completions.create.side_effect = Exception("API Error")
+            
+            with patch('eval.evaluation.AsyncOpenAI', return_value=mock_judge), \
+                 patch('eval.evaluation.logger') as mock_logger:
+                
+                evaluator = LLMEvaluation()
+                
+                score, explanation = await evaluator._llm_judge_evaluation(
+                    reference="레퍼런스",
+                    prediction="예측",
+                    spam_text="텍스트"
+                )
+                
+                assert score == 0.0
+                assert "평가 중 오류" in explanation
+                mock_logger.warning.assert_called()
 
 
 class TestLLMEvaluationIntegration:
@@ -158,7 +333,9 @@ class TestLLMEvaluationIntegration:
         """모킹된 LLMEvaluation 인스턴스"""
         with patch('eval.evaluation.load_dataset') as mock_load_dataset, \
              patch('eval.evaluation.get_config') as mock_config, \
-             patch('eval.evaluation.AsyncOpenAI') as mock_openai:
+             patch('eval.evaluation.AsyncOpenAI') as mock_openai, \
+             patch('eval.evaluation.CrossEncoder') as mock_cross_encoder, \
+             patch('eval.evaluation.SentenceBLEU') as mock_bleu:
             
             # 데이터셋 모킹
             mock_dataset = [
@@ -179,7 +356,7 @@ class TestLLMEvaluationIntegration:
             mock_env = Mock()
             mock_env.SPAM_MODEL_URL = "http://test.com"
             mock_env.SPAM_MODEL_API_KEY = "test-key"
-            mock_env.SPAM_MODEL = "test-model"
+            mock_env.OPENAI_API_KEY = "openai-test-key"
             mock_config.return_value = mock_env
             
             # OpenAI 클라이언트 모킹
@@ -196,57 +373,89 @@ class TestLLMEvaluationIntegration:
         """성공적인 평가 실행 테스트"""
         evaluator, mock_client = mock_evaluator
         
-        # API 응답 모킹
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "예측 결과"
-        mock_client.chat.completions.create.return_value = mock_response
+        # 모델 API 응답 모킹
+        model_response = Mock()
+        model_response.choices = [Mock()]
+        model_response.choices[0].message.content = "예측 결과"
         
-        # 평가 메트릭 모킹 (score 메서드 사용)
+        # Judge API 응답 모킹
+        judge_response = Mock()
+        judge_response.choices = [Mock()]
+        judge_response.choices[0].message.content = json.dumps({
+            "score": 0.9,
+            "explanation": "좋은 예측"
+        })
+        
+        # 두 개의 다른 응답 (모델, judge)
+        mock_client.chat.completions.create.side_effect = [
+            model_response,  # 첫 번째 샘플 - 모델 호출
+            judge_response,  # 첫 번째 샘플 - judge 호출
+            model_response,  # 두 번째 샘플 - 모델 호출
+            judge_response,  # 두 번째 샘플 - judge 호출
+        ]
+        
+        # 평가 메트릭 모킹
         with patch.object(evaluator.bleu, 'score', return_value=0.8), \
-             patch.object(evaluator.rouge, 'score', return_value={'rouge1': 0.7, 'rouge2': 0.6}):
+             patch.object(evaluator, '_calculate_semantic_similarity', return_value=0.75):
             
             results = await evaluator.evaluate()
         
         # 검증
-        assert 'BLEU' in results
-        assert 'ROUGE' in results
-        assert results['BLEU'] == 0.8
-        assert results['ROUGE']['rouge1'] == 0.7
-        assert results['ROUGE']['rouge2'] == 0.6
+        assert 'bleu' in results
+        assert 'semantic_similarity' in results
+        assert 'llm_judge' in results
+        assert 'metrics_details' in results
+        assert 'total_samples' in results
         
-        # API 호출 횟수 확인 (데이터셋 크기만큼)
-        assert mock_client.chat.completions.create.call_count == 2
+        assert results['bleu'] == 0.8
+        assert results['semantic_similarity'] == 0.75
+        assert results['llm_judge'] == 0.9
+        assert results['total_samples'] == 2
+        
+        # API 호출 횟수 확인 (각 샘플당 모델 + judge = 2번, 총 4번)
+        assert mock_client.chat.completions.create.call_count == 4
     
     @pytest.mark.asyncio
     async def test_evaluate_with_api_errors(self, mock_evaluator):
         """API 오류가 있는 경우 평가 테스트"""
         evaluator, mock_client = mock_evaluator
         
-        # 첫 번째 호출은 실패, 두 번째는 성공
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "예측 결과"
+        # 모델 응답
+        model_response = Mock()
+        model_response.choices = [Mock()]
+        model_response.choices[0].message.content = "예측 결과"
         
+        # Judge 응답
+        judge_response = Mock()
+        judge_response.choices = [Mock()]
+        judge_response.choices[0].message.content = json.dumps({
+            "score": 0.5,
+            "explanation": "평가 완료"
+        })
+        
+        # 첫 번째 샘플은 실패, 두 번째는 성공
         mock_client.chat.completions.create.side_effect = [
-            Exception("API Error"),  # 첫 번째 호출 실패
-            mock_response             # 두 번째 호출 성공
+            Exception("API Error"),  # 첫 번째 샘플 - 모델 호출 실패
+            model_response,          # 두 번째 샘플 - 모델 호출 성공
+            judge_response,          # 두 번째 샘플 - judge 호출 성공
         ]
         
         # 평가 메트릭 모킹 (성공한 경우에만)
         with patch.object(evaluator.bleu, 'score', return_value=0.5), \
-             patch.object(evaluator.rouge, 'score', return_value={'rouge1': 0.4}), \
+             patch.object(evaluator, '_calculate_semantic_similarity', return_value=0.4), \
              patch('eval.evaluation.logger') as mock_logger:
             
             results = await evaluator.evaluate()
         
         # 검증
-        assert 'BLEU' in results
-        assert 'ROUGE' in results
-        assert results['BLEU'] == 0.5  # 성공한 하나의 샘플만
+        assert 'bleu' in results
+        assert 'semantic_similarity' in results
+        assert 'llm_judge' in results
+        assert results['bleu'] == 0.5  # 성공한 하나의 샘플만
+        assert results['total_samples'] == 1
         
         # 경고 로그가 기록되었는지 확인
-        mock_logger.warning.assert_called_once()
+        mock_logger.warning.assert_called()
     
     @pytest.mark.asyncio
     async def test_evaluate_all_samples_fail(self, mock_evaluator):
@@ -266,20 +475,32 @@ class TestLLMEvaluationIntegration:
         evaluator, mock_client = mock_evaluator
         
         # 빈 응답 모킹
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "   "  # 공백만 있는 응답
-        mock_client.chat.completions.create.return_value = mock_response
+        model_response = Mock()
+        model_response.choices = [Mock()]
+        model_response.choices[0].message.content = "   "  # 공백만 있는 응답
+        
+        judge_response = Mock()
+        judge_response.choices = [Mock()]
+        judge_response.choices[0].message.content = json.dumps({
+            "score": 0.0,
+            "explanation": "빈 응답"
+        })
+        
+        mock_client.chat.completions.create.side_effect = [
+            model_response, judge_response,
+            model_response, judge_response
+        ]
         
         # 평가 메트릭 모킹
         with patch.object(evaluator.bleu, 'score', return_value=0.0), \
-             patch.object(evaluator.rouge, 'score', return_value={'rouge1': 0.0}):
+             patch.object(evaluator, '_calculate_semantic_similarity', return_value=0.0):
             
             results = await evaluator.evaluate()
         
         # 검증 - 빈 예측도 처리되어야 함
-        assert 'BLEU' in results
-        assert 'ROUGE' in results
+        assert 'bleu' in results
+        assert 'semantic_similarity' in results
+        assert 'llm_judge' in results
     
     def test_module_import_success(self):
         """모듈 import 성공 테스트"""
@@ -294,22 +515,39 @@ class TestLLMEvaluationIntegration:
     
     @pytest.mark.asyncio
     async def test_evaluate_temperature_setting(self, mock_evaluator):
-        """temperature=0.0 설정 확인 테스트"""
+        """temperature 설정 확인 테스트"""
         evaluator, mock_client = mock_evaluator
         
         # API 응답 모킹
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "예측 결과"
-        mock_client.chat.completions.create.return_value = mock_response
+        model_response = Mock()
+        model_response.choices = [Mock()]
+        model_response.choices[0].message.content = "예측 결과"
+        
+        judge_response = Mock()
+        judge_response.choices = [Mock()]
+        judge_response.choices[0].message.content = json.dumps({
+            "score": 0.8,
+            "explanation": "평가 완료"
+        })
+        
+        mock_client.chat.completions.create.side_effect = [
+            model_response, judge_response,
+            model_response, judge_response
+        ]
         
         # 평가 메트릭 모킹
         with patch.object(evaluator.bleu, 'score', return_value=0.8), \
-             patch.object(evaluator.rouge, 'score', return_value={'rouge1': 0.7}):
+             patch.object(evaluator, '_calculate_semantic_similarity', return_value=0.7):
             
             await evaluator.evaluate()
         
-        # temperature=0.0으로 호출되었는지 확인
-        call_args = mock_client.chat.completions.create.call_args_list[0]
-        assert call_args[1]['temperature'] == 0.0
-        assert call_args[1]['model'] == evaluator.model_name
+        # temperature 설정 확인 (모델은 0.0, judge는 0.1)
+        call_args_list = mock_client.chat.completions.create.call_args_list
+        
+        # 첫 번째 호출 (모델): temperature=0.0
+        assert call_args_list[0][1]['temperature'] == 0.0
+        assert call_args_list[0][1]['model'] == evaluator.model_name
+        
+        # 두 번째 호출 (judge): temperature=0.1
+        assert call_args_list[1][1]['temperature'] == 0.1
+        assert call_args_list[1][1]['model'] == evaluator.judge_model_name

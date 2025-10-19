@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # 데이터 처리 파이프라인 자동화 스크립트 (배치 처리 버전)
 # 사용법: ./run_data_pipeline.sh [입력파일] [옵션들]
@@ -91,17 +91,13 @@ check_python_env() {
     log_success "파이썬 환경 확인 완료"
 }
 
-# 함수: 파일 존재 확인
-check_input_file() {
-    local input_file="$1"
-    
-    if [[ ! -f "$input_file" ]]; then
-        log_error "입력 파일을 찾을 수 없습니다: $input_file"
+# 함수: 입력 파일 검증
+validate_input_file() {
+    if [ ! -f "$input_file" ]; then
+        echo "${RED}[ERROR] 입력 파일을 찾을 수 없습니다: $input_file${NC}"
+        echo "${RED}[ERROR] 먼저 데이터를 준비해주세요.${NC}"
         exit 1
     fi
-    
-    local file_size=$(du -h "$input_file" | cut -f1)
-    log_info "입력 파일: $input_file (크기: $file_size)"
 }
 
 # 함수: 파이프라인 실행
@@ -122,10 +118,10 @@ run_pipeline() {
     cmd="$cmd --output_dir \"$output_dir\""
     
     # 샘플링 매개변수 추가 (값이 있는 경우에만)
-    if [[ -n "$sample_size" ]]; then
+    if [ -n "$sample_size" ]; then
         cmd="$cmd --sample_size $sample_size"
     fi
-    if [[ -n "$sample_seed" ]]; then
+    if [ -n "$sample_seed" ]; then
         cmd="$cmd --sample_seed $sample_seed"
     fi
     
@@ -146,19 +142,12 @@ run_pipeline() {
             cmd="$cmd --status"
             log_info "파이프라인 상태를 확인합니다..."
             ;;
-        "full")
-            log_info "전체 파이프라인을 실행합니다..."
-            ;;
-        "custom")
-            cmd="$cmd $skip_flags"
-            log_info "사용자 정의 파이프라인을 실행합니다..."
-            ;;
     esac
     
-    if [[ "$dry_run" == "true" ]]; then
-        log_info "DRY RUN - 실행될 명령어:"
+    if [ "$dry_run" = "true" ]; then
+        echo "${BLUE}[INFO] 실행될 명령어:${NC}"
         echo "  $cmd"
-        return 0
+        exit 0
     fi
     
     log_info "실행 명령어: $cmd"
@@ -190,8 +179,8 @@ main() {
     local sample_seed=""
     
     # 인자 파싱
-    while [[ $# -gt 0 ]]; do
-        case $1 in
+    while [ $# -gt 0 ]; do
+        case "$1" in
             -h|--help)
                 show_help
                 exit 0
@@ -254,7 +243,7 @@ main() {
                 ;;
             *)
                 # 첫 번째 위치 인자는 입력 파일로 처리
-                if [[ "$input_file" == "$DEFAULT_INPUT_FILE" ]]; then
+                if [ "$input_file" = "$DEFAULT_INPUT_FILE" ]; then
                     input_file="$1"
                 else
                     log_error "너무 많은 인자입니다: $1"
@@ -267,9 +256,9 @@ main() {
     done
     
     # 환경 및 파일 확인 (status 모드가 아닌 경우에만)
-    if [[ "$mode" != "status" ]]; then
+    if [ "$mode" != "status" ]; then
         check_python_env
-        check_input_file "$input_file"
+        validate_input_file
     fi
     
     # 파이프라인 실행

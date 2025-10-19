@@ -12,3 +12,4 @@ outputs/
 wandb/
 last_run_prepared/
 cuda-keyring_1.0-1_all.deb
+*logs/

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Axolotl 모델 학습 자동화 스크립트
 # 사용법: ./train_axolotl.sh [설정파일] [옵션들]
@@ -128,7 +128,7 @@ validate_config() {
     
     log_step "설정 파일 검증"
     
-    if [[ ! -f "$config_file" ]]; then
+    if [ ! -f "$config_file" ]; then
         log_error "설정 파일을 찾을 수 없습니다: $config_file"
         exit 1
     fi
@@ -163,21 +163,17 @@ prepare_directories() {
     
     log_step "디렉토리 준비"
     
-    # 출력 디렉토리 생성
-    if [[ ! -d "$output_dir" ]]; then
+    if [ ! -d "$output_dir" ]; then
+        log_info "출력 디렉토리를 생성합니다: $output_dir"
         mkdir -p "$output_dir"
-        log_info "출력 디렉토리 생성: $output_dir"
-    else
-        log_info "출력 디렉토리 확인: $output_dir"
     fi
+    log_info "출력 디렉토리 확인: $output_dir"
     
-    # 로그 디렉토리 생성
-    if [[ ! -d "$log_dir" ]]; then
+    if [ ! -d "$log_dir" ]; then
+        log_info "로그 디렉토리를 생성합니다: $log_dir"
         mkdir -p "$log_dir"
-        log_info "로그 디렉토리 생성: $log_dir"
-    else
-        log_info "로그 디렉토리 확인: $log_dir"
     fi
+    log_info "로그 디렉토리 확인: $log_dir"
 }
 
 # 함수: 학습 실행
@@ -218,7 +214,7 @@ run_training() {
     esac
     
     # 추가 인자 적용
-    if [[ -n "$additional_args" ]]; then
+    if [ -n "$additional_args" ]; then
         cmd="$cmd $additional_args"
     fi
     
@@ -226,11 +222,11 @@ run_training() {
     local timestamp=$(date +"%Y%m%d_%H%M%S")
     local log_file="$log_dir/axolotl_${mode}_${timestamp}.log"
     
-    if [[ "$verbose" == "true" ]]; then
+    if [ "$verbose" = "true" ]; then
         cmd="$cmd --verbose"
     fi
     
-    if [[ "$dry_run" == "true" ]]; then
+    if [ "$dry_run" = "true" ]; then
         log_info "DRY RUN - 실행될 명령어:"
         echo "  $cmd"
         echo "  로그 파일: $log_file"
@@ -289,8 +285,8 @@ main() {
     local quiet="false"
     
     # 인자 파싱
-    while [[ $# -gt 0 ]]; do
-        case $1 in
+    while [ $# -gt 0 ]; do
+        case "$1" in
             -h|--help)
                 show_help
                 exit 0
@@ -358,7 +354,7 @@ main() {
                 ;;
             *)
                 # 첫 번째 위치 인자는 설정 파일로 처리
-                if [[ "$config_file" == "$DEFAULT_CONFIG" ]]; then
+                if [ "$config_file" = "$DEFAULT_CONFIG" ]; then
                     config_file="$1"
                 else
                     log_error "너무 많은 인자입니다: $1"
@@ -371,7 +367,7 @@ main() {
     done
     
     # Quiet 모드가 아닌 경우에만 시스템 확인
-    if [[ "$quiet" != "true" && "$mode" != "validate" ]]; then
+    if [ "$quiet" != "true" ] && [ "$mode" != "validate" ]; then
         check_system_requirements
     fi
     
@@ -379,7 +375,7 @@ main() {
     validate_config "$config_file"
     
     # 디렉토리 준비
-    if [[ "$mode" != "validate" ]]; then
+    if [ "$mode" != "validate" ]; then
         prepare_directories "$output_dir" "$log_dir"
     fi
     

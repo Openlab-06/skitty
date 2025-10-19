@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Axolotl LoRA 모델 병합 자동화 스크립트
 # 사용법: ./run_merge.sh [설정파일] [옵션들]
@@ -6,9 +6,8 @@
 set -e  # 오류 발생 시 스크립트 중단
 
 # 기본 설정
-DEFAULT_CONFIG="./src/config/gemma3-full.yaml"
-DEFAULT_LORA_MODEL_DIR="./outputs/gemma3"
-DEFAULT_OUTPUT_DIR="./outputs/merged"
+DEFAULT_CONFIG="./src/config/gemma3.yaml"
+DEFAULT_LORA_MODEL_DIR="./outputs/gemma3/checkpoint-85"
 DEFAULT_LOG_DIR="./logs"
 
 # 색상 설정
@@ -38,11 +37,14 @@ show_help() {
     echo "  -h, --help                            이 도움말 출력"
     echo "  --config CONFIG                       설정 파일 경로 지정"
     echo "  --lora-model-dir DIR                  LoRA 모델 디렉토리 (기본값: $DEFAULT_LORA_MODEL_DIR)"
-    echo "  --output-dir DIR                      출력 디렉토리 (기본값: $DEFAULT_OUTPUT_DIR)"
     echo "  --log-dir DIR                         로그 디렉토리 (기본값: $DEFAULT_LOG_DIR)"
     echo "  --dry-run                             실제 실행 없이 명령어만 출력"
     echo "  --verbose                             상세한 로그 출력"
     echo "  --quiet                               최소한의 로그만 출력"
+    echo ""
+    echo "${CYAN}📝 참고:${NC}"
+    echo "  병합된 모델은 config 파일의 output_dir 아래 merged/ 폴더에 저장됩니다."
+    echo "  예: output_dir이 './outputs/gemma3'이면 './outputs/gemma3/merged'에 저장"
     echo ""
 }
 
@@ -72,6 +74,16 @@ log_step() {
 # 함수: 시스템 환경 확인
 check_system_requirements() {
     log_step "시스템 환경 확인"
+    
+    # Hugging Face 토큰 확인
+    if [ -z "$HF_TOKEN" ]; then
+        log_warning "HF_TOKEN 환경 변수가 설정되지 않았습니다."
+        log_info "Hugging Face 토큰을 설정하려면:"
+        log_info "  export HF_TOKEN='your_token_here'"
+        log_info "또는 ~/.huggingface/token 파일에 토큰을 저장하세요."
+    else
+        log_success "Hugging Face 토큰이 감지되었습니다."
+    fi
     
     # CUDA 확인
     if command -v nvidia-smi &> /dev/null; then
@@ -119,7 +131,7 @@ validate_config() {
     
     log_step "설정 파일 검증"
     
-    if [[ ! -f "$config_file" ]]; then
+    if [ ! -f "$config_file" ]; then
         log_error "설정 파일을 찾을 수 없습니다: $config_file"
         exit 1
     fi
@@ -148,33 +160,31 @@ validate_config() {
 # 함수: 디렉토리 준비
 prepare_directories() {
     local lora_model_dir="$1"
-    local output_dir="$2"
-    local log_dir="$3"
+    local log_dir="$2"
+    local config_file="$3"
     
     log_step "디렉토리 준비"
     
     # LoRA 모델 디렉토리 확인
-    if [[ ! -d "$lora_model_dir" ]]; then
+    if [ ! -d "$lora_model_dir" ]; then
         log_error "LoRA 모델 디렉토리를 찾을 수 없습니다: $lora_model_dir"
         exit 1
-    else
-        log_info "LoRA 모델 디렉토리 확인: $lora_model_dir"
     fi
-    
-    # 출력 디렉토리 생성
-    if [[ ! -d "$output_dir" ]]; then
-        mkdir -p "$output_dir"
-        log_info "출력 디렉토리 생성: $output_dir"
-    else
-        log_info "출력 디렉토리 확인: $output_dir"
-    fi
+    log_info "LoRA 모델 디렉토리 확인: $lora_model_dir"
     
     # 로그 디렉토리 생성
-    if [[ ! -d "$log_dir" ]]; then
+    if [ ! -d "$log_dir" ]; then
         mkdir -p "$log_dir"
         log_info "로그 디렉토리 생성: $log_dir"
+    fi
+    log_info "로그 디렉토리 확인: $log_dir"
+    
+    # config 파일에서 output_dir 읽기
+    local config_output_dir=$(grep -E '^output_dir:' "$config_file" | awk '{print $2}' 2>/dev/null || echo "")
+    if [ -n "$config_output_dir" ]; then
+        log_info "병합된 모델 저장 경로: ${config_output_dir}/merged"
     else
-        log_info "로그 디렉토리 확인: $log_dir"
+        log_info "병합된 모델은 config 파일의 output_dir/merged에 저장됩니다."
     fi
 }
 
@@ -195,11 +205,11 @@ run_merge() {
     local timestamp=$(date +"%Y%m%d_%H%M%S")
     local log_file="$log_dir/axolotl_merge_${timestamp}.log"
     
-    if [[ "$verbose" == "true" ]]; then
+    if [ "$verbose" = "true" ]; then
         cmd="$cmd --verbose"
     fi
     
-    if [[ "$dry_run" == "true" ]]; then
+    if [ "$dry_run" = "true" ]; then
         log_info "DRY RUN - 실행될 명령어:"
         echo "  $cmd"
         echo "  로그 파일: $log_file"
@@ -250,15 +260,14 @@ run_merge() {
 main() {
     local config_file="$DEFAULT_CONFIG"
     local lora_model_dir="$DEFAULT_LORA_MODEL_DIR"
-    local output_dir="$DEFAULT_OUTPUT_DIR"
     local log_dir="$DEFAULT_LOG_DIR"
     local dry_run="false"
     local verbose="false"
     local quiet="false"
     
     # 인자 파싱
-    while [[ $# -gt 0 ]]; do
-        case $1 in
+    while [ $# -gt 0 ]; do
+        case "$1" in
             -h|--help)
                 show_help
                 exit 0
@@ -269,10 +278,6 @@ main() {
                 ;;
             --lora-model-dir)
                 lora_model_dir="$2"
-                shift 2
-                ;;
-            --output-dir)
-                output_dir="$2"
                 shift 2
                 ;;
             --log-dir)
@@ -291,14 +296,9 @@ main() {
                 quiet="true"
                 shift
                 ;;
-            -*)
-                log_error "알 수 없는 옵션: $1"
-                show_help
-                exit 1
-                ;;
             *)
                 # 첫 번째 위치 인자는 설정 파일로 처리
-                if [[ "$config_file" == "$DEFAULT_CONFIG" ]]; then
+                if [ "$config_file" = "$DEFAULT_CONFIG" ]; then
                     config_file="$1"
                 else
                     log_error "너무 많은 인자입니다: $1"
@@ -311,7 +311,7 @@ main() {
     done
     
     # Quiet 모드가 아닌 경우에만 시스템 확인
-    if [[ "$quiet" != "true" ]]; then
+    if [ "$quiet" != "true" ]; then
         check_system_requirements
     fi
     
@@ -319,7 +319,7 @@ main() {
     validate_config "$config_file"
     
     # 디렉토리 준비
-    prepare_directories "$lora_model_dir" "$output_dir" "$log_dir"
+    prepare_directories "$lora_model_dir" "$log_dir" "$config_file"
     
     # LoRA 병합 실행
     run_merge "$config_file" "$lora_model_dir" "$dry_run" "$log_dir" "$verbose"

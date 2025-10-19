@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # =============================================================================
 # LLM 자동 평가 플랫폼 - Skitty Edition 🐱
@@ -97,8 +97,8 @@ show_progress() {
 }
 
 # 명령행 인수 파싱
-while [[ $# -gt 0 ]]; do
-    case $1 in
+while [ $# -gt 0 ]; do
+    case "$1" in
         -h|--help)
             show_help
             exit 0
@@ -144,7 +144,7 @@ main() {
     fi
     
     # 평가 스크립트 존재 확인
-    if [[ -f "eval/evaluation.py" ]]; then
+    if [ -f "eval/evaluation.py" ]; then
         log_success "📄 평가 스크립트 확인: eval/evaluation.py"
     else
         log_error "평가 스크립트를 찾을 수 없습니다: eval/evaluation.py"

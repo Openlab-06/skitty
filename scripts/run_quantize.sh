@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # 모델 양자화 자동화 스크립트 (AWQ / GPTQ)
 # 사용법: ./run_quantize.sh [옵션들]
@@ -130,46 +130,63 @@ check_system_requirements() {
 }
 
 # 함수: 모델 경로 검증
-validate_model_path() {
-    local model_path="$1"
-    
+validate_model() {
     log_step "모델 경로 검증"
     
-    if [[ ! -d "$model_path" ]]; then
+    if [ ! -d "$model_path" ]; then
         log_error "모델 디렉토리를 찾을 수 없습니다: $model_path"
-        log_info "먼저 모델을 merge 해야 합니다:"
-        log_info "  ./scripts/run_merge.sh"
         exit 1
     fi
+    log_info "모델 디렉토리 확인: $model_path"
     
-    # config.json 또는 model 파일 확인
-    if [[ ! -f "$model_path/config.json" ]]; then
-        log_error "모델 설정 파일(config.json)을 찾을 수 없습니다: $model_path"
+    if [ ! -f "$model_path/config.json" ]; then
+        log_error "모델 config 파일을 찾을 수 없습니다: $model_path/config.json"
         exit 1
     fi
-    
-    log_success "모델 경로 확인: $model_path"
+    log_success "모델 구조 검증 완료"
 }
 
 # 함수: 출력 디렉토리 준비
 prepare_output_dir() {
-    local output_dir="$1"
-    local quantization_type="$2"
-    
     log_step "출력 디렉토리 준비"
     
-    # 양자화 타입별 서브 디렉토리 생성
-    local full_output_dir="${output_dir}/${quantization_type}"
-    
-    if [[ -d "$full_output_dir" ]]; then
+    if [ -d "$full_output_dir" ]; then
         log_warning "출력 디렉토리가 이미 존재합니다: $full_output_dir"
-        log_warning "기존 파일을 덮어쓸 수 있습니다."
+        log_info "기존 파일은 유지되며, 새로운 파일이 덮어씌워질 수 있습니다."
     else
         mkdir -p "$full_output_dir"
-        log_info "출력 디렉토리 생성: $full_output_dir"
+        log_success "출력 디렉토리 생성 완료: $full_output_dir"
+    fi
+}
+
+# 함수: 양자화 명령어 구성
+build_quantization_command() {
+    log_step "양자화 명령어 구성"
+    
+    local quant_cmd="python src/optimizer/quantize.py"
+    quant_cmd="$quant_cmd --model-path \"$model_path\""
+    quant_cmd="$quant_cmd --output-dir \"$full_output_dir\""
+    quant_cmd="$quant_cmd --quantization-type $quantization_type"
+    quant_cmd="$quant_cmd --bits $bits"
+    quant_cmd="$quant_cmd --group-size $group_size"
+    quant_cmd="$quant_cmd --calibration-samples $calibration_samples"
+    
+    if [ -n "$dataset_name" ]; then
+        quant_cmd="$quant_cmd --dataset-name \"$dataset_name\""
     fi
     
-    echo "$full_output_dir"
+    if [ -n "$dataset_split" ]; then
+        quant_cmd="$quant_cmd --dataset-split $dataset_split"
+    fi
+    
+    if [ -n "$max_seq_length" ]; then
+        quant_cmd="$quant_cmd --max-seq-length $max_seq_length"
+    fi
+    
+    if [ "$dry_run" = "true" ]; then
+        log_info "명령어: $quant_cmd"
+        exit 0
+    fi
 }
 
 # 함수: 양자화 실행
@@ -197,19 +214,19 @@ run_quantization() {
     cmd="$cmd --group-size $group_size"
     cmd="$cmd --calibration-samples $calibration_samples"
     
-    if [[ -n "$dataset_name" ]]; then
+    if [ -n "$dataset_name" ]; then
         cmd="$cmd --dataset-name \"$dataset_name\""
     fi
     
-    if [[ -n "$dataset_split" ]]; then
+    if [ -n "$dataset_split" ]; then
         cmd="$cmd --dataset-split $dataset_split"
     fi
     
-    if [[ -n "$max_seq_length" ]]; then
+    if [ -n "$max_seq_length" ]; then
         cmd="$cmd --max-seq-length $max_seq_length"
     fi
     
-    if [[ "$dry_run" == "true" ]]; then
+    if [ "$dry_run" = "true" ]; then
         log_info "DRY RUN - 실행될 명령어:"
         echo "  $cmd"
         return 0
@@ -274,8 +291,8 @@ main() {
     local verbose="false"
     
     # 인자 파싱
-    while [[ $# -gt 0 ]]; do
-        case $1 in
+    while [ $# -gt 0 ]; do
+        case "$1" in
             -h|--help)
                 show_help
                 exit 0
@@ -341,7 +358,7 @@ main() {
     check_system_requirements
     
     # 모델 경로 검증
-    validate_model_path "$model_path"
+    validate_model "$model_path"
     
     # 출력 디렉토리 준비
     local full_output_dir=$(prepare_output_dir "$output_dir" "$quantization_type")

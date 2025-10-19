@@ -1,5 +1,5 @@
 # Python-generated files
-.venv/
+.venv*/
 .python-version
 __pycache__/
 *.csv

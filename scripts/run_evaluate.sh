@@ -33,6 +33,11 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# 기본 설정
+LIMIT=""
+VERBOSE="false"
+MODEL_NAME="google/gemma-3-4b-it"
+
 # Skitty 시작 화면
 show_skitty_banner() {
     echo ""
@@ -60,10 +65,20 @@ show_help() {
     echo "${CYAN}사용법:${NC} $0 [옵션]"
     echo ""
     echo "${YELLOW}옵션:${NC}"
-    echo "  -h, --help          이 도움말 표시"
+    echo "  -h, --help              이 도움말 표시"
+    echo "  -l, --limit N           평가할 샘플 수 제한 (기본값: 전체)"
+    echo "  -v, --verbose           상세 로그 출력"
+    echo "  --model MODEL_NAME      평가할 모델명 (기본값: google/gemma-3-4b-it)"
     echo ""
     echo "${YELLOW}예시:${NC}"
-    echo "  $0                  # LLM 자동 평가 실행"
+    echo "  $0                          # 전체 데이터로 평가"
+    echo "  $0 --limit 10               # 10개 샘플로 테스트 평가"
+    echo "  $0 --limit 100 --verbose    # 100개 샘플로 상세 평가"
+    echo ""
+    echo "${YELLOW}📊 평가 메트릭:${NC}"
+    echo "  • BLEU Score (25%): 어휘 수준의 일치도"
+    echo "  • Semantic Similarity (35%): 의미론적 유사성"
+    echo "  • LLM Judge Score (40%): GPT-4o의 설명 품질 평가"
     echo ""
 }
 
@@ -87,6 +102,18 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             show_help
             exit 0
+            ;;
+        -l|--limit)
+            LIMIT="$2"
+            shift 2
+            ;;
+        -v|--verbose)
+            VERBOSE="true"
+            shift
+            ;;
+        --model)
+            MODEL_NAME="$2"
+            shift 2
             ;;
         *)
             log_error "알 수 없는 옵션: $1"
@@ -136,7 +163,7 @@ main() {
     start_time=$(date +%s)
     
     # Python 스크립트 실행
-    if python eval/evaluation.py; then
+    if python eval/evaluation.py --limit "$LIMIT" --verbose "$VERBOSE" --model "$MODEL_NAME"; then
         # 종료 시간 계산
         end_time=$(date +%s)
         duration=$((end_time - start_time))

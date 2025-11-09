@@ -6,8 +6,9 @@
 base_model: google/gemma-3-4b-it
 
 # QAT 양자화 설정
-weight_dtype: fp8
-activation_dtype: fp8
+qat:
+  activation_dtype: int4
+  weight_dtype: int4
 
 # gemma3 doesn't seem to play nice with ddp
 ddp_find_unused_parameters: true

@@ -13,3 +13,6 @@ wandb/
 last_run_prepared/
 cuda-keyring_1.0-1_all.deb
 *logs/
+node_modules/
+package-lock.json
+package.json

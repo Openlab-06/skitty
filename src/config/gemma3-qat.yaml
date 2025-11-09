@@ -1,0 +1,77 @@
+# Gemma3 QAT (Quantization Aware Training) 설정
+# Float8 양자화 - 최신 트렌드 (2024-2025)
+# 주의: QAT는 LoRA와 함께 사용 불가, Full fine-tuning만 가능
+
+# 기본 모델 설정
+base_model: google/gemma-3-4b-it
+
+# QAT 양자화 설정
+weight_dtype: fp8
+activation_dtype: fp8
+
+# gemma3 doesn't seem to play nice with ddp
+ddp_find_unused_parameters: true
+
+# instruction output 형식은 axolotl에서 alpaca 형식으로 제공
+datasets:
+  - path: Devocean-06/Spam_QA-Corpus
+    type: alpaca
+    split: train
+
+test-datasets:
+  - path: Devocean-06/Spam_QA-Corpus
+    type: alpaca
+    split: validation
+
+output_dir: ./outputs/gemma3-qat-fp8
+
+# QAT는 adapter 사용 불가 (Full fine-tuning)
+# adapter: qlora  # QAT와 함께 사용 불가
+# lora_model_dir:  # QAT와 함께 사용 불가
+
+# 시퀀스 길이 : 모델의 한 번의 요청에서 처리할 수 있는 최대 길이
+sequence_len: 1500
+# 모델의 seq_len에 맞게 데이터를 packing하여 처리하는 옵션
+sample_packing: true
+
+# train monitoring
+# 프로젝트 이름
+wandb_project: skitty-spam_filering-qat
+wandb_entity:
+wandb_watch:
+wandb_name:
+wandb_log_model:
+
+# 기울기 누적 - QAT는 메모리를 더 많이 사용하므로 조정 필요할 수 있음
+gradient_accumulation_steps: 20
+# 배치 사이즈 - QAT는 메모리 사용이 많아서 줄일 수 있음
+micro_batch_size: 4
+num_epochs: 3
+# 옵티마이저
+optimizer: adamw_8bit
+# 스케줄러 -> 이를 통해서 학습률을 cosine 함수에 따라서 점차 0에 가까워지도록 학습 진행
+lr_scheduler: cosine
+# 학습률
+learning_rate: 0.00001
+# 데이터 타입
+bf16: auto
+fp16:
+tf32: false
+
+# 모델의 기울기를 저장 -> 이를 통해 기존에는 모델의 기울기를 저장하지 않으면 이를 학습과정에서 메모리에 담아두어야 하지만, 이를 매 step마다 저장하여 필요할 때만 메모리에 로드를 하므로 gpu 리소스 절약 가능
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+logging_steps: 50
+
+# 커널 최적화
+flash_attention: true
+eager_attention: true
+
+# 워밍업 비율
+warmup_steps: 10
+eval_steps: 100
+save_steps: 100
+save_strategy: 'steps'
+eval_strategy: 'steps'
+weight_decay: 0.01

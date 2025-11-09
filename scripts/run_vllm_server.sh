@@ -7,10 +7,8 @@ vllm serve Devocean-06/Spam_Filter-gemma \
   --dtype bfloat16 \
   --tensor-parallel-size 1 \
   --gpu-memory-utilization 0.90 \
-  --max-model-len 32000 \
+  --max-model-len 4096 \
   --enable-prefix-caching \
-  --max-seq-len-to-capture 4096 \
   --enable-chunked-prefill \
-  --max-num-batched-tokens 32000 \
   --max-num-seqs 128 \
   --trust-remote-code

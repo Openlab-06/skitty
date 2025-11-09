@@ -5,10 +5,14 @@
 
 set -e  # 오류 발생 시 스크립트 중단
 
+# 스크립트 디렉토리 기준으로 프로젝트 루트 찾기
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # 기본 설정
-DEFAULT_CONFIG="./src/config/gemma3.yaml"
-DEFAULT_OUTPUT_DIR="./outputs"
-DEFAULT_LOG_DIR="./logs"
+DEFAULT_CONFIG="$PROJECT_ROOT/src/config/gemma3.yaml"
+DEFAULT_OUTPUT_DIR="$PROJECT_ROOT/outputs"
+DEFAULT_LOG_DIR="$PROJECT_ROOT/logs"
 
 # 색상 설정
 RED='\033[0;31m'

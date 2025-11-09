@@ -5,10 +5,14 @@
 
 set -e  # 오류 발생 시 스크립트 중단
 
+# 스크립트 디렉토리 기준으로 프로젝트 루트 찾기
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # 기본 설정
-DEFAULT_MODEL_PATH="./outputs/merged"
-DEFAULT_OUTPUT_DIR="./outputs/quantized"
-DEFAULT_QUANTIZATION_TYPE="awq"
+DEFAULT_MODEL_PATH="$PROJECT_ROOT/outputs/gemma3/merged"
+DEFAULT_OUTPUT_DIR="$PROJECT_ROOT/outputs/gemma3/quantized"
+DEFAULT_QUANTIZATION_TYPE="gptq"
 DEFAULT_BITS=4
 DEFAULT_GROUP_SIZE=128
 DEFAULT_CALIBRATION_SAMPLES=512
@@ -148,7 +152,13 @@ validate_model() {
 
 # 함수: 출력 디렉토리 준비
 prepare_output_dir() {
+    local output_dir="$1"
+    local quantization_type="$2"
+    
     log_step "출력 디렉토리 준비"
+    
+    # 양자화 타입별 서브디렉토리 생성
+    local full_output_dir="${output_dir}_${quantization_type}"
     
     if [ -d "$full_output_dir" ]; then
         log_warning "출력 디렉토리가 이미 존재합니다: $full_output_dir"
@@ -157,6 +167,8 @@ prepare_output_dir() {
         mkdir -p "$full_output_dir"
         log_success "출력 디렉토리 생성 완료: $full_output_dir"
     fi
+    
+    echo "$full_output_dir"
 }
 
 # 함수: 양자화 명령어 구성
@@ -233,7 +245,7 @@ run_quantization() {
     fi
     
     log_info "양자화 설정:"
-    log_info "  - 타입: ${quantization_type^^}"
+    log_info "  - 타입: $(echo "$quantization_type" | tr '[:lower:]' '[:upper:]')"
     log_info "  - 비트: ${bits}bit"
     log_info "  - 그룹 사이즈: $group_size"
     log_info "  - Calibration 샘플: $calibration_samples"

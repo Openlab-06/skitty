@@ -2,9 +2,9 @@ import pandas as pd
 from google import genai
 from google.genai import types
 from src.utils.log import logger, log_performance, decorator_log
-from src.utils.exception import DataArgumentationError
+from src.utils.exception import DataAugmentationError
 from src.config.env_config import get_config
-from src.config.data_config import DataConfig
+from src.data import constants
 import logging
 from tqdm import tqdm
 import asyncio
@@ -13,8 +13,8 @@ from typing import List, Tuple
 
 env = get_config()
 
-class DataArgumentation:
-    def __init__(self, file_path: str, batch_size: int = DataConfig.DEFAULT_AUG_BATCH_SIZE):
+class DataAugmentation:
+    def __init__(self, file_path: str, batch_size: int = constants.DEFAULT_AUG_BATCH_SIZE):
         self.gemini_client = genai.Client(api_key=env.GEMINI_API_KEY)
         self.openai_client = AsyncOpenAI(api_key=env.OPENAI_API_KEY)
         self.data = pd.read_csv(file_path)
@@ -80,7 +80,7 @@ class DataArgumentation:
 
             except Exception as e:
                 logger.error(f"[SPAM AUG] idx={idx} failed after all attempts: {e}")
-                raise DataArgumentationError(error=str(e), status_code=500) from e
+                raise DataAugmentationError(error=str(e), status_code=500) from e
 
     async def _process_batch(self, batch_data: List[Tuple[int, str]]) -> List[Tuple[int, str]]:
         """배치 처리"""
@@ -159,5 +159,5 @@ class DataArgumentation:
         logger.info("Saved augmented data to ./src/data/final_spam.csv")
             
 if __name__ == "__main__":
-    data_argumentation = DataArgumentation(file_path="./src/data/filter_spam_high.csv")
-    asyncio.run(data_argumentation.data_argumentation())
+    data_augmentation = DataAugmentation(file_path="./src/data/filter_spam_high.csv")
+    asyncio.run(data_augmentation.data_argumentation())

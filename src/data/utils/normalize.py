@@ -1,14 +1,14 @@
 import re
 from typing import List
-from src.config.data_config import DataConfig
+from src.data import constants
 
 class TextProcessor:
     """텍스트 전처리를 담당하는 클래스"""
-    
+
     def __init__(self):
-        self.phone_re = re.compile(DataConfig.PHONE_PATTERN)
-        self.url_re = re.compile(DataConfig.URL_PATTERN)
-        self.num_re = re.compile(DataConfig.NUM_PATTERN)
+        self.phone_re = re.compile(constants.PHONE_PATTERN)
+        self.url_re = re.compile(constants.URL_PATTERN)
+        self.num_re = re.compile(constants.NUM_PATTERN)
     
     def normalize(self, text: str) -> str:
         """텍스트 정규화"""

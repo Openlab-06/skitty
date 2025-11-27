@@ -1,8 +1,8 @@
 from typing import List, Dict, Tuple
 import polars as pl
-from src.config.data_config import DataConfig
+from src.data import constants
 from src.utils.log import logger
-from src.data.data_normalize import TextProcessor
+from src.data.utils.normalize import TextProcessor
 
 class DataFrameProcessor:
     """DataFrame 처리를 담당하는 클래스"""
@@ -20,7 +20,7 @@ class DataFrameProcessor:
         
         # 전처리
         processor = TextProcessor()
-        df = df.with_row_index(name=DataConfig.ID_COL).with_columns(
+        df = df.with_row_index(name=constants.ID_COL).with_columns(
             pl.col(text_col)
               .cast(pl.Utf8, strict=False)
               .fill_null("")
@@ -38,8 +38,8 @@ class DataFrameProcessor:
         
         # 유니크 레코드
         unique_df = df.filter(
-            pl.col(DataConfig.ID_COL).is_in(unique_indices)
-        ).drop([f"{text_col}_norm", DataConfig.ID_COL])
+            pl.col(constants.ID_COL).is_in(unique_indices)
+        ).drop([f"{text_col}_norm", constants.ID_COL])
         
         # 중복 분석 결과
         if duplicate_info:
@@ -47,24 +47,24 @@ class DataFrameProcessor:
             
             # 원본 텍스트 정보 추가
             text_mapping = df.select([
-                pl.col(DataConfig.ID_COL),
+                pl.col(constants.ID_COL),
                 pl.col(text_col)
             ])
-            
+
             # 원본 텍스트 조인
             dup_df = dup_df.join(
                 text_mapping.select([
-                    pl.col(DataConfig.ID_COL).alias("original_index"),
+                    pl.col(constants.ID_COL).alias("original_index"),
                     pl.col(text_col).alias("original_text")
                 ]),
                 on="original_index",
                 how="left"
             )
-            
+
             # 중복 텍스트 조인
             dup_df = dup_df.join(
                 text_mapping.select([
-                    pl.col(DataConfig.ID_COL).alias("duplicate_index"),
+                    pl.col(constants.ID_COL).alias("duplicate_index"),
                     pl.col(text_col).alias("duplicate_text")
                 ]),
                 on="duplicate_index",
@@ -100,9 +100,9 @@ class DataFrameProcessor:
                     unique_path: str, dup_path: str, original_count: int):
         """결과 저장 및 요약"""
         logger.info("Saving results to Parquet files")
-        
-        unique_df.write_parquet(unique_path, compression=DataConfig.COMPRESSION)
-        dup_df.write_parquet(dup_path, compression=DataConfig.COMPRESSION)
+
+        unique_df.write_parquet(unique_path, compression=constants.COMPRESSION)
+        dup_df.write_parquet(dup_path, compression=constants.COMPRESSION)
         
         # 결과 요약
         removed_count = original_count - unique_df.height

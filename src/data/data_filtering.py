@@ -8,8 +8,8 @@ from openai import AsyncOpenAI
 from tqdm import tqdm
 
 from src.config.env_config import get_config
-from src.config.data_config import DataConfig
-from src.domain.data_enum import DataComplexity
+from src.data import constants
+from src.utils.enum import DataComplexity
 from src.utils.exception import DataFilteringError
 from src.utils.log import logger, log_performance, decorator_log
 
@@ -17,13 +17,13 @@ env = get_config()
 logging.basicConfig(level=logging.INFO)
 
 class DataFiltering:
-    def __init__(self, file_path: str, sample_size: float = None, sample_seed: int = None, batch_size: int = DataConfig.DEFAULT_FILTER_BATCH_SIZE):
+    def __init__(self, file_path: str, sample_size: float = None, sample_seed: int = None, batch_size: int = constants.DEFAULT_FILTER_BATCH_SIZE):
         self.gemini_client = genai.Client(api_key=env.GEMINI_API_KEY)
         self.openai_client = AsyncOpenAI(api_key=env.OPENAI_API_KEY)
         self.batch_size = batch_size  # 배치 크기 설정
 
-        frac = sample_size if sample_size is not None else DataConfig.DEFAULT_SAMPLE_SIZE
-        seed = sample_seed if sample_seed is not None else DataConfig.DEFAULT_SAMPLE_SEED
+        frac = sample_size if sample_size is not None else constants.DEFAULT_SAMPLE_SIZE
+        seed = sample_seed if sample_seed is not None else constants.DEFAULT_SAMPLE_SEED
 
         df = pd.read_parquet(file_path)
         logger.info(f"Loaded rows (before sample): {len(df)}")

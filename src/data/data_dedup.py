@@ -2,16 +2,16 @@ import re
 from typing import List, Tuple, Dict
 import polars as pl
 from simhash import Simhash, SimhashIndex
-from src.config.data_config import DataConfig
+from src.data import constants
 from src.utils.log import logger, log_performance, decorator_log
-from src.data.data_normalize import TextProcessor
+from src.data.utils.normalize import TextProcessor
 from src.utils.exception import DataDeduplicationError
 import logging
 
 class SimhashGenerator:
     """Simhash 생성을 담당하는 클래스"""
-    
-    def __init__(self, ngram_size: int = DataConfig.NGRAM_N):
+
+    def __init__(self, ngram_size: int = constants.NGRAM_N):
         self.ngram_size = ngram_size
         self.text_processor = TextProcessor()
     
@@ -22,8 +22,8 @@ class SimhashGenerator:
 
 class DuplicateFinder:
     """중복 찾기를 담당하는 클래스"""
-    
-    def __init__(self, hamming_distance: int = DataConfig.SIMHASH_K):
+
+    def __init__(self, hamming_distance: int = constants.SIMHASH_K):
         self.hamming_distance = hamming_distance
         self.simhash_gen = SimhashGenerator()
     

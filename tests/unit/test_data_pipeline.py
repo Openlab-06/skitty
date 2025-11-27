@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from pathlib import Path
 import polars as pl
-from src.data_pipeline import DataPipeline
+from src.service.data_pipeline import DataPipeline
 
 
 class TestDataPipeline:
@@ -38,10 +38,10 @@ class TestDataPipeline:
         assert pipeline.final_output.name == "final_spam.csv"
 
     @patch('pathlib.Path.exists')
-    @patch('src.data_pipeline.DataArgumentation')
-    @patch('src.data_pipeline.DataFiltering') 
-    @patch('src.data_pipeline.dedup_csv_file')
-    @patch('src.data_pipeline.logger')
+    @patch('src.service.data_pipeline.DataAugmentation')
+    @patch('src.service.data_pipeline.DataFiltering')
+    @patch.object(DataPipeline, '_dedup_csv_file')
+    @patch('src.service.data_pipeline.logger')
     @patch('asyncio.run')  # asyncio.run 모킹 추가
     def test_run_full_pipeline_all_steps(self, mock_asyncio_run, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
         """모든 단계가 실행되는 경우 테스트"""
@@ -71,10 +71,10 @@ class TestDataPipeline:
         assert mock_logger.info.call_count >= 5
 
     @patch('pathlib.Path.exists')
-    @patch('src.data_pipeline.DataArgumentation')
-    @patch('src.data_pipeline.DataFiltering')
-    @patch('src.data_pipeline.dedup_csv_file')
-    @patch('src.data_pipeline.logger')
+    @patch('src.service.data_pipeline.DataAugmentation')
+    @patch('src.service.data_pipeline.DataFiltering')
+    @patch.object(DataPipeline, '_dedup_csv_file')
+    @patch('src.service.data_pipeline.logger')
     @patch('asyncio.run')
     def test_run_full_pipeline_skip_dedup(self, mock_asyncio_run, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
         """중복제거 건너뛰기 테스트"""
@@ -96,8 +96,8 @@ class TestDataPipeline:
         assert mock_asyncio_run.call_count == 2
 
     @patch('pathlib.Path.exists')
-    @patch('src.data_pipeline.dedup_csv_file')
-    @patch('src.data_pipeline.logger')
+    @patch.object(DataPipeline, '_dedup_csv_file')
+    @patch('src.service.data_pipeline.logger')
     def test_run_full_pipeline_missing_dedup_file(self, mock_logger, mock_dedup, mock_exists, pipeline):
         """중복제거 파일이 없는 경우 에러 테스트"""
         # unique_output 파일이 존재하지 않는다고 모킹
@@ -108,10 +108,10 @@ class TestDataPipeline:
             pipeline.run_full_pipeline(run_dedup=False)
 
     @patch('pathlib.Path.exists')
-    @patch('src.data_pipeline.DataArgumentation')
-    @patch('src.data_pipeline.DataFiltering')
-    @patch('src.data_pipeline.dedup_csv_file')
-    @patch('src.data_pipeline.logger')
+    @patch('src.service.data_pipeline.DataAugmentation')
+    @patch('src.service.data_pipeline.DataFiltering')
+    @patch.object(DataPipeline, '_dedup_csv_file')
+    @patch('src.service.data_pipeline.logger')
     @patch('asyncio.run')
     def test_run_full_pipeline_skip_filtering(self, mock_asyncio_run, mock_logger, mock_dedup, mock_filtering_class, mock_aug_class, mock_exists, pipeline):
         """데이터 필터링 건너뛰기 테스트"""
@@ -139,9 +139,9 @@ class TestDataPipeline:
         mock_aug_class.assert_called_with(str(pipeline.unique_output), batch_size=20)
 
     @patch('pathlib.Path.exists')
-    @patch('src.data_pipeline.DataFiltering')
-    @patch('src.data_pipeline.dedup_csv_file')
-    @patch('src.data_pipeline.logger')
+    @patch('src.service.data_pipeline.DataFiltering')
+    @patch.object(DataPipeline, '_dedup_csv_file')
+    @patch('src.service.data_pipeline.logger')
     @patch('asyncio.run')
     def test_run_full_pipeline_skip_argumentation(self, mock_asyncio_run, mock_logger, mock_dedup, mock_filtering_class, mock_exists, pipeline):
         """데이터 증강 건너뛰기 테스트"""
@@ -165,8 +165,8 @@ class TestDataPipeline:
         assert mock_asyncio_run.call_count == 1
 
     @patch('pathlib.Path.exists')
-    @patch('src.data_pipeline.dedup_csv_file')
-    @patch('src.data_pipeline.logger')
+    @patch.object(DataPipeline, '_dedup_csv_file')
+    @patch('src.service.data_pipeline.logger')
     def test_run_full_pipeline_exception_handling(self, mock_logger, mock_dedup, mock_exists, pipeline):
         """예외 처리 테스트"""
         # Mock 설정
@@ -229,7 +229,7 @@ class TestDataPipeline:
         assert status == expected_status
 
     @patch('pathlib.Path.exists')
-    @patch('src.data_pipeline.DataArgumentation')
+    @patch('src.service.data_pipeline.DataAugmentation')
     @patch('asyncio.run')
     def test_argumentation_input_selection(self, mock_asyncio_run, mock_aug_class, mock_exists, pipeline):
         """데이터 증강 단계에서 입력 파일 선택 로직 테스트"""
@@ -240,7 +240,7 @@ class TestDataPipeline:
         mock_aug_class.return_value = mock_aug_instance
         
         # dedup과 filtering을 건너뛰고 argumentation만 실행
-        with patch('src.data_pipeline.logger'):
+        with patch('src.service.data_pipeline.logger'):
             pipeline.run_full_pipeline(run_dedup=False, run_filtering=False, run_argumentation=True)
         
         # final_output을 입력으로 사용했는지 확인 (하지만 run_filtering=False이므로 unique_output 사용)
@@ -251,10 +251,10 @@ class TestDataPipelineMain:
     """main 함수 테스트"""
 
     @patch('argparse.ArgumentParser')
-    @patch('src.data_pipeline.DataPipeline')
+    @patch('src.service.data_pipeline.DataPipeline')
     def test_main_status_option(self, mock_pipeline_class, mock_parser_class):
         """--status 옵션 테스트"""
-        from src.data_pipeline import main
+        from src.service.data_pipeline import main
         
         # Mock argparse
         mock_parser = Mock()
@@ -271,7 +271,7 @@ class TestDataPipelineMain:
         mock_pipeline_instance.get_pipeline_status.return_value = {"status": "ok"}
         mock_pipeline_class.return_value = mock_pipeline_instance
         
-        with patch('src.data_pipeline.logger'):
+        with patch('src.service.data_pipeline.logger'):
             result = main()
         
         # 검증
@@ -280,10 +280,10 @@ class TestDataPipelineMain:
         mock_pipeline_instance.run_full_pipeline.assert_not_called()
 
     @patch('argparse.ArgumentParser')
-    @patch('src.data_pipeline.DataPipeline')
+    @patch('src.service.data_pipeline.DataPipeline')
     def test_main_full_pipeline(self, mock_pipeline_class, mock_parser_class):
         """전체 파이프라인 실행 테스트"""
-        from src.data_pipeline import main
+        from src.service.data_pipeline import main
         
         # Mock argparse
         mock_parser = Mock()
@@ -323,10 +323,10 @@ class TestDataPipelineMain:
         )
 
     @patch('argparse.ArgumentParser')
-    @patch('src.data_pipeline.DataPipeline')
+    @patch('src.service.data_pipeline.DataPipeline')
     def test_main_with_exception(self, mock_pipeline_class, mock_parser_class):
         """예외 발생 시 테스트"""
-        from src.data_pipeline import main
+        from src.service.data_pipeline import main
         
         # Mock argparse
         mock_parser = Mock()
@@ -347,7 +347,7 @@ class TestDataPipelineMain:
         mock_pipeline_instance.run_full_pipeline.side_effect = Exception("Test error")
         mock_pipeline_class.return_value = mock_pipeline_instance
         
-        with patch('src.data_pipeline.logger') as mock_logger:
+        with patch('src.service.data_pipeline.logger') as mock_logger:
             result = main()
         
         # 검증

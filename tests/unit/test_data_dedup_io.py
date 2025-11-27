@@ -4,9 +4,9 @@ from unittest.mock import Mock, patch, MagicMock
 import polars as pl
 from pathlib import Path
 
-from src.data.data_normalize import TextProcessor
+from src.data.utils.normalize import TextProcessor
 from src.data.data_dedup import SimhashGenerator, DuplicateFinder
-from src.data.data_io import DataFrameProcessor
+from src.data.utils.io import DataFrameProcessor
 
 
 class TestTextProcessor:

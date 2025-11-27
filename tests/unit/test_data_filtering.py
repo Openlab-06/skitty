@@ -6,7 +6,7 @@ import asyncio
 from pathlib import Path
 
 from src.data.data_filtering import DataFiltering
-from src.config.data_config import DataConfig
+from src.data import constants
 from src.utils.exception import DataFilteringError
 
 
@@ -58,7 +58,7 @@ class TestDataFilteringInit:
         data_filter = DataFiltering("test.parquet")
 
         # 기본값 검증
-        assert data_filter.batch_size == DataConfig.DEFAULT_FILTER_BATCH_SIZE
+        assert data_filter.batch_size == constants.DEFAULT_FILTER_BATCH_SIZE
         assert len(data_filter.data) == 1  # 20 * 0.05 (기본 샘플 사이즈)
 
     @patch('src.data.data_filtering.pd.read_parquet')

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from src.data_pipeline import DataPipeline
+from src.service.data_pipeline import DataPipeline
 
 # 통합 테스트
 class TestDataPipelineIntegration:
@@ -21,9 +21,9 @@ class TestDataPipelineIntegration:
             'output_dir': str(output_dir)
         }
 
-    @patch('src.data_pipeline.DataArgumentation')
-    @patch('src.data_pipeline.DataFiltering')
-    @patch('src.data_pipeline.dedup_csv_file')
+    @patch('src.service.data_pipeline.DataAugmentation')
+    @patch('src.service.data_pipeline.DataFiltering')
+    @patch.object(DataPipeline, '_dedup_csv_file')
     @patch('asyncio.run')
     def test_integration_pipeline_flow(self, mock_asyncio_run, mock_dedup, mock_filtering_class, mock_aug_class, temp_files):
         """실제 파일 시스템을 사용한 통합 테스트"""
@@ -41,7 +41,7 @@ class TestDataPipelineIntegration:
         # 파이프라인 실행
         pipeline = DataPipeline(temp_files['input_file'], temp_files['output_dir'])
         
-        with patch('src.data_pipeline.logger'):
+        with patch('src.service.data_pipeline.logger'):
             pipeline.run_full_pipeline()
         
         # 모든 단계가 실행되었는지 확인

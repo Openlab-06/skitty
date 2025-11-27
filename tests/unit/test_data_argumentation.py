@@ -1,20 +1,20 @@
-"""data_argumentation.py 모듈에 대한 단위 테스트"""
+"""data_augmentation.py 모듈에 대한 단위 테스트"""
 import pytest
 from unittest.mock import Mock, patch, AsyncMock, MagicMock
 import pandas as pd
 import asyncio
 from pathlib import Path
 
-from src.data.data_argumentation import DataArgumentation
-from src.config.data_config import DataConfig
-from src.utils.exception import DataArgumentationError
+from src.data.data_augmentation import DataAugmentation
+from src.data import constants
+from src.utils.exception import DataAugmentationError
 
 
-class TestDataArgumentationInit:
-    """DataArgumentation 초기화 테스트"""
+class TestDataAugmentationInit:
+    """DataAugmentation 초기화 테스트"""
 
-    @patch('src.data.data_argumentation.pd.read_csv')
-    @patch('src.data.data_argumentation.get_config')
+    @patch('src.data.data_augmentation.pd.read_csv')
+    @patch('src.data.data_augmentation.get_config')
     def test_init_success(self, mock_get_config, mock_read_csv):
         """정상적인 초기화 테스트"""
         # Mock 설정
@@ -30,7 +30,7 @@ class TestDataArgumentationInit:
         mock_read_csv.return_value = mock_df
 
         # 테스트 실행
-        data_aug = DataArgumentation("test.csv", batch_size=5)
+        data_aug = DataAugmentation("test.csv", batch_size=5)
 
         # 검증
         mock_read_csv.assert_called_once_with("test.csv")
@@ -38,8 +38,8 @@ class TestDataArgumentationInit:
         assert len(data_aug.data) == 3
         assert "CN" in data_aug.data.columns
 
-    @patch('src.data.data_argumentation.pd.read_csv')
-    @patch('src.data.data_argumentation.get_config')
+    @patch('src.data.data_augmentation.pd.read_csv')
+    @patch('src.data.data_augmentation.get_config')
     def test_init_with_defaults(self, mock_get_config, mock_read_csv):
         """기본값으로 초기화 테스트"""
         # Mock 설정
@@ -55,13 +55,13 @@ class TestDataArgumentationInit:
         mock_read_csv.return_value = mock_df
 
         # 테스트 실행
-        data_aug = DataArgumentation("test.csv")
+        data_aug = DataAugmentation("test.csv")
 
         # 기본값 검증
-        assert data_aug.batch_size == DataConfig.DEFAULT_AUG_BATCH_SIZE
+        assert data_aug.batch_size == constants.DEFAULT_AUG_BATCH_SIZE
 
-    @patch('src.data.data_argumentation.pd.read_csv')
-    @patch('src.data.data_argumentation.get_config')
+    @patch('src.data.data_augmentation.pd.read_csv')
+    @patch('src.data.data_augmentation.get_config')
     def test_prompt_content(self, mock_get_config, mock_read_csv):
         """프롬프트 내용 테스트"""
         # Mock 설정
@@ -74,7 +74,7 @@ class TestDataArgumentationInit:
         mock_read_csv.return_value = mock_df
 
         # 테스트 실행
-        data_aug = DataArgumentation("test.csv")
+        data_aug = DataAugmentation("test.csv")
 
         # 프롬프트 내용 검증
         assert "스팸 문자로 판정한 근거를 생성하는" in data_aug.prompt
@@ -90,9 +90,9 @@ class TestProcessSingleText:
 
     @pytest.fixture
     def data_aug(self):
-        """테스트용 DataArgumentation 인스턴스"""
-        with patch('src.data.data_argumentation.pd.read_csv') as mock_read_csv, \
-             patch('src.data.data_argumentation.get_config') as mock_get_config:
+        """테스트용 DataAugmentation 인스턴스"""
+        with patch('src.data.data_augmentation.pd.read_csv') as mock_read_csv, \
+             patch('src.data.data_augmentation.get_config') as mock_get_config:
             
             mock_config = Mock()
             mock_config.GEMINI_API_KEY = "test_gemini_key"
@@ -104,7 +104,7 @@ class TestProcessSingleText:
             mock_df = pd.DataFrame({"CN": ["test text"], "complexity": ["HIGH"]})
             mock_read_csv.return_value = mock_df
 
-            return DataArgumentation("test.csv")
+            return DataAugmentation("test.csv")
 
     @pytest.mark.asyncio
     async def test_process_single_text_gemini_success(self, data_aug):
@@ -156,7 +156,7 @@ class TestProcessSingleText:
         )
 
         # 테스트 실행 및 예외 확인
-        with pytest.raises(DataArgumentationError):
+        with pytest.raises(DataAugmentationError):
             await data_aug._process_single_text("test spam text", 0)
 
 
@@ -165,9 +165,9 @@ class TestProcessBatch:
 
     @pytest.fixture
     def data_aug(self):
-        """테스트용 DataArgumentation 인스턴스"""
-        with patch('src.data.data_argumentation.pd.read_csv') as mock_read_csv, \
-             patch('src.data.data_argumentation.get_config') as mock_get_config:
+        """테스트용 DataAugmentation 인스턴스"""
+        with patch('src.data.data_augmentation.pd.read_csv') as mock_read_csv, \
+             patch('src.data.data_augmentation.get_config') as mock_get_config:
             
             mock_config = Mock()
             mock_config.GEMINI_API_KEY = "test_gemini_key"
@@ -177,7 +177,7 @@ class TestProcessBatch:
             mock_df = pd.DataFrame({"CN": ["test text"], "complexity": ["HIGH"]})
             mock_read_csv.return_value = mock_df
 
-            return DataArgumentation("test.csv")
+            return DataAugmentation("test.csv")
 
     @pytest.mark.asyncio
     async def test_process_batch_success(self, data_aug):
@@ -222,14 +222,14 @@ class TestProcessBatch:
         assert results[2][1] == "세 번째 스팸 설명입니다."
 
 
-class TestDataArgumentation:
+class TestDataAugmentation:
     """data_argumentation 메서드 테스트"""
 
     @pytest.fixture
     def data_aug(self):
-        """테스트용 DataArgumentation 인스턴스"""
-        with patch('src.data.data_argumentation.pd.read_csv') as mock_read_csv, \
-             patch('src.data.data_argumentation.get_config') as mock_get_config:
+        """테스트용 DataAugmentation 인스턴스"""
+        with patch('src.data.data_augmentation.pd.read_csv') as mock_read_csv, \
+             patch('src.data.data_augmentation.get_config') as mock_get_config:
             
             mock_config = Mock()
             mock_config.GEMINI_API_KEY = "test_gemini_key"
@@ -242,10 +242,10 @@ class TestDataArgumentation:
             })
             mock_read_csv.return_value = mock_df
 
-            return DataArgumentation("test.csv", batch_size=2)
+            return DataAugmentation("test.csv", batch_size=2)
 
     @pytest.mark.asyncio
-    @patch('src.data.data_argumentation.logger')
+    @patch('src.data.data_augmentation.logger')
     async def test_data_argumentation_success(self, mock_logger, data_aug):
         """데이터 증강 성공 테스트"""
         # Mock _process_batch
@@ -269,7 +269,7 @@ class TestDataArgumentation:
         assert "output" in data_aug.data.columns
 
     @pytest.mark.asyncio
-    @patch('src.data.data_argumentation.logger')
+    @patch('src.data.data_augmentation.logger')
     async def test_data_argumentation_with_batch_fallback(self, mock_logger, data_aug):
         """배치 실패 시 개별 처리 fallback 테스트"""
         # Mock _process_batch - 첫 번째 배치 실패
@@ -318,8 +318,8 @@ class TestDataArgumentation:
 class TestArgumentationIntegration:
     """통합 테스트"""
 
-    @patch('src.data.data_argumentation.pd.read_csv')
-    @patch('src.data.data_argumentation.get_config')
+    @patch('src.data.data_augmentation.pd.read_csv')
+    @patch('src.data.data_augmentation.get_config')
     def test_prompt_formatting(self, mock_get_config, mock_read_csv):
         """프롬프트 포맷팅 테스트"""
         # Mock 설정
@@ -332,15 +332,15 @@ class TestArgumentationIntegration:
         mock_read_csv.return_value = mock_df
 
         # 테스트 실행
-        data_aug = DataArgumentation("test.csv")
+        data_aug = DataAugmentation("test.csv")
         
         # 프롬프트 포맷팅 테스트
         formatted_prompt = data_aug.prompt.format(text="테스트 스팸 문자")
         assert "테스트 스팸 문자" in formatted_prompt
         assert "스팸 문자로 판정한 근거" in formatted_prompt
 
-    @patch('src.data.data_argumentation.pd.read_csv')
-    @patch('src.data.data_argumentation.get_config')
+    @patch('src.data.data_augmentation.pd.read_csv')
+    @patch('src.data.data_augmentation.get_config')
     def test_batch_size_configuration(self, mock_get_config, mock_read_csv):
         """배치 크기 설정 테스트"""
         # Mock 설정
@@ -354,12 +354,12 @@ class TestArgumentationIntegration:
 
         # 다양한 배치 크기로 테스트
         for batch_size in [1, 3, 5, 10]:
-            data_aug = DataArgumentation("test.csv", batch_size=batch_size)
+            data_aug = DataAugmentation("test.csv", batch_size=batch_size)
             assert data_aug.batch_size == batch_size
 
     @pytest.mark.asyncio
-    @patch('src.data.data_argumentation.pd.read_csv')
-    @patch('src.data.data_argumentation.get_config')
+    @patch('src.data.data_augmentation.pd.read_csv')
+    @patch('src.data.data_augmentation.get_config')
     async def test_gemini_config_usage(self, mock_get_config, mock_read_csv):
         """Gemini 설정 사용 테스트"""
         # Mock 설정
@@ -373,7 +373,7 @@ class TestArgumentationIntegration:
         mock_df = pd.DataFrame({"CN": ["test text"], "complexity": ["HIGH"]})
         mock_read_csv.return_value = mock_df
 
-        data_aug = DataArgumentation("test.csv")
+        data_aug = DataAugmentation("test.csv")
 
         # Mock Gemini response
         mock_response = Mock()
@@ -394,9 +394,9 @@ class TestArgumentationIntegration:
 class TestMainFunction:
     """__main__ 블록 테스트"""
 
-    @patch('src.data.data_argumentation.asyncio.run')
-    @patch('src.data.data_argumentation.DataArgumentation')
-    @patch('src.data.data_argumentation.logger')
+    @patch('src.data.data_augmentation.asyncio.run')
+    @patch('src.data.data_augmentation.DataAugmentation')
+    @patch('src.data.data_augmentation.logger')
     def test_main_execution(self, mock_logger, mock_data_argumentation_class, mock_asyncio_run):
         """메인 함수 실행 테스트"""
         # Mock 설정
@@ -404,10 +404,10 @@ class TestMainFunction:
         mock_data_argumentation_class.return_value = mock_instance
 
         # __main__ 블록 시뮬레이션
-        from src.data.data_argumentation import DataArgumentation
+        from src.data.data_augmentation import DataAugmentation
         
-        # 직접 DataArgumentation을 생성하고 실행하는 것을 시뮬레이션
-        data_aug = DataArgumentation("./src/data/filter_spam_high.csv")
+        # 직접 DataAugmentation을 생성하고 실행하는 것을 시뮬레이션
+        data_aug = DataAugmentation("./src/data/filter_spam_high.csv")
         
         # 인스턴스가 생성되었는지 확인
         assert data_aug is not None
@@ -418,9 +418,9 @@ class TestErrorHandling:
 
     @pytest.fixture
     def data_aug(self):
-        """테스트용 DataArgumentation 인스턴스"""
-        with patch('src.data.data_argumentation.pd.read_csv') as mock_read_csv, \
-             patch('src.data.data_argumentation.get_config') as mock_get_config:
+        """테스트용 DataAugmentation 인스턴스"""
+        with patch('src.data.data_augmentation.pd.read_csv') as mock_read_csv, \
+             patch('src.data.data_augmentation.get_config') as mock_get_config:
             
             mock_config = Mock()
             mock_config.GEMINI_API_KEY = "test_gemini_key"
@@ -430,7 +430,7 @@ class TestErrorHandling:
             mock_df = pd.DataFrame({"CN": ["test text"], "complexity": ["HIGH"]})
             mock_read_csv.return_value = mock_df
 
-            return DataArgumentation("test.csv")
+            return DataAugmentation("test.csv")
 
     @pytest.mark.asyncio
     async def test_gemini_timeout_error(self, data_aug):
@@ -464,5 +464,5 @@ class TestErrorHandling:
         )
 
         # 테스트 실행 및 예외 확인
-        with pytest.raises(DataArgumentationError, match="Connection failed"):
+        with pytest.raises(DataAugmentationError, match="Connection failed"):
             await data_aug._process_single_text("test text", 0)

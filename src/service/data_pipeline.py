@@ -2,37 +2,64 @@
 데이터 처리 파이프라인 전체 오케스트레이션
 """
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 import polars as pl
 
-from src.config.data_config import DataConfig
+from src.data import constants
 from src.utils.log import logger, log_performance
-from src.data.data_processing import dedup_csv_file
-from src.data.data_argumentation import DataArgumentation
+from src.data.utils.io import DataFrameProcessor
+from src.data.data_dedup import DuplicateFinder
+from src.data.data_augmentation import DataAugmentation
 from src.data.data_filtering import DataFiltering
 
 class DataPipeline:
     """전체 데이터 처리 파이프라인을 관리하는 클래스"""
-    
+
     def __init__(self, input_csv_path: str, output_dir: str = "./src/data"):
         self.input_csv_path = Path(input_csv_path)
         self.output_dir = Path(output_dir)
-        
+
         # 출력 파일 경로 설정
         self.unique_output = self.output_dir / "deduplicated_result.parquet"
         self.dups_output = self.output_dir / "duplicate_analysis.parquet"
         self.final_output = self.output_dir / "final_spam.csv"
+
+    def _dedup_csv_file(self, text_col: str, hamming_distance: int = constants.SIMHASH_K,
+                        ngram_size: int = constants.NGRAM_N) -> Tuple[pl.DataFrame, pl.DataFrame]:
+        """중복제거 내부 메서드"""
+        # 1. 데이터 로드 및 전처리
+        df = DataFrameProcessor.load_and_preprocess(str(self.input_csv_path), text_col)
+        original_count = df.height
+
+        # 2. 중복 찾기
+        duplicate_finder = DuplicateFinder(hamming_distance)
+        texts = df[f"{text_col}_norm"].to_list()
+
+        index, simhash_objects, empty_count = duplicate_finder.build_index(texts)
+        unique_indices, duplicate_info = duplicate_finder.find_duplicates(index, simhash_objects, texts)
+
+        # 3. 결과 DataFrame 생성
+        unique_df, dup_df = DataFrameProcessor.create_result_dataframes(
+            df, unique_indices, duplicate_info, text_col
+        )
+
+        # 4. 결과 저장
+        DataFrameProcessor.save_results(
+            unique_df, dup_df, str(self.unique_output), str(self.dups_output), original_count
+        )
+
+        return unique_df, dup_df
         
     @log_performance
-    def run_full_pipeline(self, 
-                         text_col: str = DataConfig.TEXT_COL,
+    def run_full_pipeline(self,
+                         text_col: str = constants.TEXT_COL,
                          run_dedup: bool = True,
                          run_filtering: bool = True,
                          run_argumentation: bool = True,
                          sample_size: Optional[float] = None,
                          sample_seed: Optional[int] = None,
-                         filter_batch_size: int = DataConfig.DEFAULT_FILTER_BATCH_SIZE,
-                         aug_batch_size: int = DataConfig.DEFAULT_AUG_BATCH_SIZE) -> None:
+                         filter_batch_size: int = constants.DEFAULT_FILTER_BATCH_SIZE,
+                         aug_batch_size: int = constants.DEFAULT_AUG_BATCH_SIZE) -> None:
         """
         전체 데이터 처리 파이프라인 실행
         
@@ -52,12 +79,7 @@ class DataPipeline:
             # 1. 중복제거 단계
             if run_dedup:
                 logger.info("=== Step 1: Deduplication ===")
-                unique_df, dup_df = dedup_csv_file(
-                    input_path=str(self.input_csv_path),
-                    output_unique_path=str(self.unique_output),
-                    output_dups_path=str(self.dups_output),
-                    text_col=text_col
-                )
+                unique_df, dup_df = self._dedup_csv_file(text_col=text_col)
                 logger.info(f"Deduplication completed. Unique records: {unique_df.height:,}")
             else:
                 logger.info("Skipping deduplication step")
@@ -81,13 +103,13 @@ class DataPipeline:
             
             # 3. 데이터 증강 단계
             if run_argumentation:
-                logger.info("=== Step 3: Data Argumentation ===")
+                logger.info("=== Step 3: Data Augmentation ===")
                 # 필터링이 실행된 경우 필터링 결과를 사용, 아니면 중복제거 결과 사용
                 input_file = str(self.final_output) if run_filtering and self.final_output.exists() else str(self.unique_output)
-                data_aug = DataArgumentation(input_file, batch_size=aug_batch_size)
+                data_aug = DataAugmentation(input_file, batch_size=aug_batch_size)
                 import asyncio
                 asyncio.run(data_aug.data_argumentation())
-                logger.info(f"Data argumentation completed. Output: {self.final_output}")
+                logger.info(f"Data augmentation completed. Output: {self.final_output}")
             else:
                 logger.info("Skipping data argumentation step")
             
@@ -130,7 +152,7 @@ def main():
     
     parser.add_argument("--input", required=True, help="입력 CSV 파일 경로")
     parser.add_argument("--output_dir", default="./src/data", help="출력 디렉토리")
-    parser.add_argument("--text_col", default=DataConfig.TEXT_COL, help="텍스트 컬럼명")
+    parser.add_argument("--text_col", default=constants.TEXT_COL, help="텍스트 컬럼명")
     parser.add_argument("--skip_dedup", action="store_true", help="중복제거 건너뛰기")
     parser.add_argument("--skip_filtering", action="store_true", help="데이터 필터링 건너뛰기")
     parser.add_argument("--skip_aug", action="store_true", help="데이터 증강 건너뛰기")

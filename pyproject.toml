@@ -23,6 +23,7 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
     "rouge-score>=0.1.2",
     "sentence-transformers>=3.0.0",
     "simhash>=2.1.2",
@@ -36,3 +37,8 @@ dependencies = [
 dev = [
     "pytest-cov>=6.2.1",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# GPU 환경에서 테스트가 필요한 quantize 관련 테스트 제외
+addopts = "-v --ignore-glob=**/test_*quantize*.py"
